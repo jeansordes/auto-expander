@@ -163,11 +163,11 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 **main.ts** (minimal, lifecycle only):
 ```ts
 import { Plugin } from "obsidian";
-import { ObsidianSamplePluginSettings, DEFAULT_SETTINGS } from "./settings";
+import { AutoExpanderSettings, DEFAULT_SETTINGS } from "./settings";
 import { registerCommands } from "./commands";
 
-export default class ObsidianSamplePlugin extends Plugin {
-  settings: ObsidianSamplePluginSettings;
+export default class AutoExpander extends Plugin {
+  settings: AutoExpanderSettings;
 
   async onload() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -178,12 +178,12 @@ export default class ObsidianSamplePlugin extends Plugin {
 
 **settings.ts**:
 ```ts
-export interface ObsidianSamplePluginSettings {
+export interface AutoExpanderSettings {
   enabled: boolean;
   apiKey: string;
 }
 
-export const DEFAULT_SETTINGS: ObsidianSamplePluginSettings = {
+export const DEFAULT_SETTINGS: AutoExpanderSettings = {
   enabled: true,
   apiKey: "",
 };
@@ -192,7 +192,7 @@ export const DEFAULT_SETTINGS: ObsidianSamplePluginSettings = {
 **commands/index.ts**:
 ```ts
 import { Plugin } from "obsidian";
-import { doSomething } from "./obsidian-sample-plugin-command";
+import { doSomething } from "./auto-expander-command";
 
 export function registerCommands(plugin: Plugin) {
   plugin.addCommand({
@@ -216,8 +216,8 @@ this.addCommand({
 ### Persist settings
 
 ```ts
-interface ObsidianSamplePluginSettings { enabled: boolean }
-const DEFAULT_SETTINGS: ObsidianSamplePluginSettings = { enabled: true };
+interface AutoExpanderSettings { enabled: boolean }
+const DEFAULT_SETTINGS: AutoExpanderSettings = { enabled: true };
 
 async onload() {
   this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -243,7 +243,7 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 
 ## References
 
-- Obsidian sample plugin: https://github.com/obsidianmd/obsidian-sample-plugin
+- Obsidian sample plugin: https://github.com/obsidianmd/auto-expander
 - API documentation: https://docs.obsidian.md
 - Developer policies: https://docs.obsidian.md/Developer+policies
 - Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines

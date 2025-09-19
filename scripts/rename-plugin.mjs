@@ -52,4 +52,4 @@ editFile('package.json');
 editFile('package-lock.json');
 
 // replace the plugin name
-replacePluginName('sample-obsidian-plugin', pluginInfos.id, ['src/main.ts', 'AGENTS.md', 'README.md', 'package.json', 'package-lock.json']);
+replacePluginName('obsidian-sample-plugin', pluginInfos.id, ['src/main.ts', 'AGENTS.md', 'README.md', 'package.json', 'package-lock.json']);

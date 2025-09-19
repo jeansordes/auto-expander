@@ -1,4 +1,4 @@
-# Obsidian Sample Plugin
+# Auto Expander
 
 This is a sample plugin for Obsidian (https://obsidian.md).
 
@@ -9,12 +9,12 @@ The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definiti
 
 Until the plugin is officially released, you can install it through BRAT (Beta Review and Testing)
 1. <a href="https://jeansordes.github.io/redirect?to=obsidian://show-plugin?id=obsidian42-brat" target="_blank">Install the BRAT plugin</a> if you don't have it already
-2. <a href="https://jeansordes.github.io/redirect?to=obsidian://brat?plugin=jeansordes/obsidian-sample-plugin" target="_blank">Install Obsidian Sample Plugin by clicking this link</a> (this will open the BRAT plugin and install the plugin)
+2. <a href="https://jeansordes.github.io/redirect?to=obsidian://brat?plugin=jeansordes/auto-expander" target="_blank">Install Auto Expander by clicking this link</a> (this will open the BRAT plugin and install the plugin)
 
 ## Features
 This sample plugin demonstrates some of the basic functionality the plugin API can do.
 - Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Obsidian Sample Plugin Modal" which opens a Modal.
+- Adds a command "Open Auto Expander Modal" which opens a Modal.
 - Adds a plugin setting tab to the settings page.
 - Registers a global click event and output 'click' to the console.
 - Registers a global interval which logs 'setInterval' to the console.

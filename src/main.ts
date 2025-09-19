@@ -6,16 +6,16 @@ const log = createDebug(pluginInfos.id + ':main');
 
 // Remember to rename these classes and interfaces!
 
-interface ObsidianSamplePluginSettings {
+interface AutoExpanderSettings {
 	mySetting: string;
 }
 
-const DEFAULT_SETTINGS: ObsidianSamplePluginSettings = {
+const DEFAULT_SETTINGS: AutoExpanderSettings = {
 	mySetting: 'default'
 }
 
-export default class ObsidianSamplePlugin extends Plugin {
-	settings: ObsidianSamplePluginSettings;
+export default class AutoExpander extends Plugin {
+	settings: AutoExpanderSettings;
 
 	async onload() {
 		// Toggle debug output dynamically using debug.enable/disable
@@ -52,7 +52,7 @@ export default class ObsidianSamplePlugin extends Plugin {
 			id: 'open-' + pluginInfos.id + '-modal-simple',
 			name: 'Open ' + pluginInfos.name + ' modal (simple)',
 			callback: () => {
-				new ObsidianSamplePluginModal(this.app).open();
+				new AutoExpanderModal(this.app).open();
 			}
 		});
 		// This adds an editor command that can perform some operation on the current editor instance
@@ -75,7 +75,7 @@ export default class ObsidianSamplePlugin extends Plugin {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
 					if (!checking) {
-						new ObsidianSamplePluginModal(this.app).open();
+						new AutoExpanderModal(this.app).open();
 					}
 
 					// This command will only show up in Command Palette when the check function returns true
@@ -85,7 +85,7 @@ export default class ObsidianSamplePlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new ObsidianSamplePluginSettingTab(this.app, this));
+		this.addSettingTab(new AutoExpanderSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -110,7 +110,7 @@ export default class ObsidianSamplePlugin extends Plugin {
 	}
 }
 
-class ObsidianSamplePluginModal extends Modal {
+class AutoExpanderModal extends Modal {
 	constructor(app: App) {
 		super(app);
 	}
@@ -126,10 +126,10 @@ class ObsidianSamplePluginModal extends Modal {
 	}
 }
 
-class ObsidianSamplePluginSettingTab extends PluginSettingTab {
-	plugin: ObsidianSamplePlugin;
+class AutoExpanderSettingTab extends PluginSettingTab {
+	plugin: AutoExpander;
 
-	constructor(app: App, plugin: ObsidianSamplePlugin) {
+	constructor(app: App, plugin: AutoExpander) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

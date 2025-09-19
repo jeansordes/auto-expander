@@ -1,8 +1,8 @@
 {
-  "name": "Obsidian Sample Plugin",
+  "name": "Auto Expander",
   "type": "module",
   "version": "0.1.0",
-  "description": "A sample plugin for Obsidian",
+  "description": "Auto expand text as you type with mobile support",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -40,7 +40,12 @@
   },
   "keywords": [
     "obsidian",
-    "obsidian-plugin"
+    "obsidian-plugin",
+    "snippet",
+    "text-expansion",
+    "obsidian-snippet",
+    "template",
+    "snippets-collection"
   ],
   "author": "jeansordes",
   "license": "MIT",

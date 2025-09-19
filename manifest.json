@@ -1,15 +1,20 @@
 {
-	"id": "obsidian-sample-plugin",
-	"name": "Obsidian Sample Plugin",
+	"id": "auto-expander",
+	"name": "Auto Expander",
 	"version": "0.1.0",
 	"minAppVersion": "0.15.0",
-	"description": "A sample plugin for Obsidian",
+	"description": "Auto expand text as you type with mobile support",
 	"author": "jeansordes",
 	"authorUrl": "https://github.com/jeansordes",
 	"fundingUrl": "https://github.com/sponsors/jeansordes",
 	"isDesktopOnly": false,
 	"keywords": [
 		"obsidian",
-		"obsidian-plugin"
+		"obsidian-plugin",
+		"snippet",
+		"text-expansion",
+		"obsidian-snippet",
+		"template",
+		"snippets-collection"
 	]
 }
