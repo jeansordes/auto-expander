@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* enhance instant input handling in ExpansionService ([f24aa03](https://github.com/jeansordes/auto-expander/commit/f24aa03cc7a1d1beb5e958137f8c820cafbfa62f))
+
+#  (2025-09-20)
+
+### Bug Fixes
+
 * another attempt at fixing the ios keyboard event register ([0c894f1](https://github.com/jeansordes/auto-expander/commit/0c894f1ac2a201e8678b4a0005363ebd7dd941af))
 
 #  (2025-09-20)
