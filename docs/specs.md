@@ -4,9 +4,9 @@
 
 The Auto Expander plugin streamlines writing in Obsidian by expanding user-defined snippets into longer phrases or templates in real-time. It supports desktop and mobile, reducing repetitive typing and standardizing content.
 
-- [ ] TODO: (#1) Write introductory documentation for plugin usage.
-- [ ] TODO: (#2) Ensure plugin works seamlessly on both desktop and mobile.
-- [ ] TODO: (#3) Test real-time expansion performance and UX.
+- [ ] TODO: [#1](https://github.com/jeansordes/auto-expander/issues/1) Write introductory documentation for plugin usage.
+- [ ] TODO: [#2](https://github.com/jeansordes/auto-expander/issues/2) Ensure plugin works seamlessly on both desktop and mobile.
+- [ ] TODO: [#3](https://github.com/jeansordes/auto-expander/issues/3) Test real-time expansion performance and UX.
 
 ## 2. Data Model
 
@@ -19,10 +19,10 @@ The Auto Expander plugin streamlines writing in Obsidian by expanding user-defin
 
 - Snippets are stored in a map keyed by trigger action (e.g., "instant", "space", "tab"), allowing multiple triggers per snippet.
 
-- [ ] TODO: (#4) Implement parsing of trigger, replacement, and commands fields from JSONC.
-- [ ] TODO: (#5) Map snippets by trigger action for efficient lookup.
-- [ ] TODO: (#6) Support cursor marker option parsing in triggers.
-- [ ] TODO: (#7) Store and retrieve snippet data from plugin storage.
+- [ ] TODO: [#4](https://github.com/jeansordes/auto-expander/issues/4) Implement parsing of trigger, replacement, and commands fields from JSONC.
+- [ ] TODO: [#5](https://github.com/jeansordes/auto-expander/issues/5) Map snippets by trigger action for efficient lookup.
+- [ ] TODO: [#6](https://github.com/jeansordes/auto-expander/issues/6) Support cursor marker option parsing in triggers.
+- [ ] TODO: [#7](https://github.com/jeansordes/auto-expander/issues/7) Store and retrieve snippet data from plugin storage.
 
 ## 3. Validation Rules
 
@@ -36,10 +36,10 @@ The Auto Expander plugin streamlines writing in Obsidian by expanding user-defin
   - Save the snippet and parse it for runtime use.
 - Users can reset snippets to the last valid configuration.
 
-- [ ] TODO: (#8) Add JSONC parser and error handling for invalid/duplicate triggers.
-- [ ] TODO: (#9) Implement warning and success message display.
-- [ ] TODO: (#10) Allow user to reset to last valid snippet configuration.
-- [ ] TODO: (#11) Prevent expansion if validation fails (error state).
+- [ ] TODO: [#8](https://github.com/jeansordes/auto-expander/issues/8) Add JSONC parser and error handling for invalid/duplicate triggers.
+- [ ] TODO: [#9](https://github.com/jeansordes/auto-expander/issues/9) Implement warning and success message display.
+- [ ] TODO: [#10](https://github.com/jeansordes/auto-expander/issues/10) Allow user to reset to last valid snippet configuration.
+- [ ] TODO: [#11](https://github.com/jeansordes/auto-expander/issues/11) Prevent expansion if validation fails (error state).
 
 ## 4. Expansion Flow
 
@@ -53,12 +53,12 @@ The Auto Expander plugin streamlines writing in Obsidian by expanding user-defin
    - If a command fails, show a warning but continue processing.
 4. Do not trigger expansions if text is selected.
 
-- [ ] TODO: (#12) Listen for all relevant keystrokes and editor actions.
-- [ ] TODO: (#13) Capture editor state before and after modification.
-- [ ] TODO: (#14) Detect and match snippet triggers on events.
-- [ ] TODO: (#15) Insert replacement text and execute commands with delay.
-- [ ] TODO: (#16) Show warning on command failure but continue.
-- [ ] TODO: (#17) Block expansion if any text is selected.
+- [ ] TODO: [#12](https://github.com/jeansordes/auto-expander/issues/12) Listen for all relevant keystrokes and editor actions.
+- [ ] TODO: [#13](https://github.com/jeansordes/auto-expander/issues/13) Capture editor state before and after modification.
+- [ ] TODO: [#14](https://github.com/jeansordes/auto-expander/issues/14) Detect and match snippet triggers on events.
+- [ ] TODO: [#15](https://github.com/jeansordes/auto-expander/issues/15) Insert replacement text and execute commands with delay.
+- [ ] TODO: [#16](https://github.com/jeansordes/auto-expander/issues/16) Show warning on command failure but continue.
+- [ ] TODO: [#17](https://github.com/jeansordes/auto-expander/issues/17) Block expansion if any text is selected.
 
 ## 5. Cursor Markers
 
@@ -71,9 +71,9 @@ The Auto Expander plugin streamlines writing in Obsidian by expanding user-defin
   `\$\{?0(?::([^}]+))?\}?`  
 - Supports flexible spacing and option lists.
 
-- [ ] TODO: (#18) Implement regex to parse cursor markers and extract options.
-- [ ] TODO: (#19) Support various cursor marker syntaxes in triggers.
-- [ ] TODO: (#20) Allow flexible option lists and whitespace handling.
+- [ ] TODO: [#18](https://github.com/jeansordes/auto-expander/issues/18) Implement regex to parse cursor markers and extract options.
+- [ ] TODO: [#19](https://github.com/jeansordes/auto-expander/issues/19) Support various cursor marker syntaxes in triggers.
+- [ ] TODO: [#20](https://github.com/jeansordes/auto-expander/issues/20) Allow flexible option lists and whitespace handling.
 
 ## 6. Regex Mechanism
 
@@ -120,10 +120,10 @@ const input = "abcdcde";
 const cursorPos = 4;
 console.log(matchesTrigger(trigger, input, cursorPos, "space")); // → true
 
-- [ ] TODO: (#21) Extract options from cursor marker in trigger string.
-- [ ] TODO: (#22) Replace cursor marker with `(?<CURSOR>)` in regex pattern.
-- [ ] TODO: (#23) Compile regex with `/d` flag and match input.
-- [ ] TODO: (#24) Check cursor alignment and event type for trigger activation.
+- [ ] TODO: [#21](https://github.com/jeansordes/auto-expander/issues/21) Extract options from cursor marker in trigger string.
+- [ ] TODO: [#22](https://github.com/jeansordes/auto-expander/issues/22) Replace cursor marker with `(?<CURSOR>)` in regex pattern.
+- [ ] TODO: [#23](https://github.com/jeansordes/auto-expander/issues/23) Compile regex with `/d` flag and match input.
+- [ ] TODO: [#24](https://github.com/jeansordes/auto-expander/issues/24) Check cursor alignment and event type for trigger activation.
 ```
 
 ## 7. Non-Regex Handling
@@ -152,9 +152,9 @@ const parseSearchString = searchString => {
   return new RegExp(escapeRegex(searchString), 'gi');
 };
 
-- [ ] TODO: (#25) Escape special regex characters for non-regex triggers.
-- [ ] TODO: (#26) Detect and use regex triggers directly if formatted as regex.
-- [ ] TODO: (#27) Unify matching logic for regex and non-regex snippets.
+- [ ] TODO: [#25](https://github.com/jeansordes/auto-expander/issues/25) Escape special regex characters for non-regex triggers.
+- [ ] TODO: [#26](https://github.com/jeansordes/auto-expander/issues/26) Detect and use regex triggers directly if formatted as regex.
+- [ ] TODO: [#27](https://github.com/jeansordes/auto-expander/issues/27) Unify matching logic for regex and non-regex snippets.
 ```
 
 ## 8. Edge Cases & Errors
@@ -163,9 +163,9 @@ const parseSearchString = searchString => {
 - If a command fails during execution, a warning is shown but the expansion proceeds.
 - The plugin maintains an error state if snippet validation fails, preventing expansions until fixed.
 
-- [ ] TODO: (#28) Prevent expansion when text is selected.
-- [ ] TODO: (#29) Show warning if a command fails during expansion.
-- [ ] TODO: (#30) Maintain error state and block expansions on validation failure.
+- [ ] TODO: [#28](https://github.com/jeansordes/auto-expander/issues/28) Prevent expansion when text is selected.
+- [ ] TODO: [#29](https://github.com/jeansordes/auto-expander/issues/29) Show warning if a command fails during expansion.
+- [ ] TODO: [#30](https://github.com/jeansordes/auto-expander/issues/30) Maintain error state and block expansions on validation failure.
 
 ---
 
@@ -230,6 +230,6 @@ export default class AutoExpander extends Plugin {
   }
 }
 
-- [ ] TODO: (#31) Integrate key event context capture into expansion flow.
-- [ ] TODO: (#32) Use before/after text and cursor data for accurate trigger detection.
+- [ ] TODO: [#31](https://github.com/jeansordes/auto-expander/issues/31) Integrate key event context capture into expansion flow.
+- [ ] TODO: [#32](https://github.com/jeansordes/auto-expander/issues/32) Use before/after text and cursor data for accurate trigger detection.
 ```
