@@ -1,5 +1,11 @@
 #  (2025-09-20)
 
+### Features
+
+* enhance trigger key handling and context management ([6547c66](https://github.com/jeansordes/auto-expander/commit/6547c66f244a396833eab4bd642e2e81076ca837))
+
+#  (2025-09-20)
+
 * feat!: refactor to v0.2.0 ([3498857](https://github.com/jeansordes/auto-expander/commit/34988574ff64777b42eec8f38c349a12473f45f1))
 
 ### Features
