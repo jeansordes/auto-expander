@@ -1,0 +1,60 @@
+import type { ParsedSnippet } from '../types';
+import type { TriggerContext } from './trigger-context';
+
+export function collectRelevantSnippets(triggerAction: string, snippetMap: Map<string, ParsedSnippet[]>): ParsedSnippet[] {
+	const actions = new Set<string>([triggerAction]);
+	if (triggerAction === 'enter') {
+		actions.add('newline');
+	}
+	if (triggerAction === 'newline') {
+		actions.add('enter');
+	}
+
+	const snippets: ParsedSnippet[] = [];
+	for (const action of actions) {
+		const candidates = snippetMap.get(action) ?? [];
+		for (const snippet of candidates) {
+			if (!snippets.includes(snippet)) {
+				snippets.push(snippet);
+			}
+		}
+	}
+	return snippets;
+}
+
+export function shouldEvaluateInstantTrigger(
+	snippet: ParsedSnippet,
+	context: TriggerContext,
+	triggerAction: string,
+	logger: (message: string) => void
+): boolean {
+	if (triggerAction !== 'instant' || context.triggerKey.length !== 1) {
+		return true;
+	}
+
+	const triggerWithoutMarker = snippet.trigger.replace(/\$\{[^}]+\}$/, '');
+	const lastChar = triggerWithoutMarker.charAt(triggerWithoutMarker.length - 1);
+	const matchesLastChar = context.triggerKey === lastChar;
+	if (!matchesLastChar) {
+		logger(`Skipping instant trigger ${snippet.trigger}: typed '${context.triggerKey}' but expected '${lastChar}'`);
+	}
+	return matchesLastChar;
+}
+
+export function logTriggerContext(
+	logger: (message: string) => void,
+	trigger: string,
+	text: string,
+	cursorIndex: number
+): void {
+	const start = Math.max(0, cursorIndex - 20);
+	const end = Math.min(text.length, cursorIndex + 20);
+	const contextText = text.substring(start, end);
+	const cursorInContext = cursorIndex - start;
+	const beforeSnippet = text.substring(Math.max(0, cursorIndex - 10), cursorIndex);
+	const afterSnippet = text.substring(cursorIndex, Math.min(text.length, cursorIndex + 10));
+
+	logger(`Checking trigger "${trigger}" with text around cursor: "...${contextText}..." (cursor at position ${cursorInContext} in context, ${cursorIndex} in full text)`);
+	logger(`Full text length: ${text.length}, cursor position: ${cursorIndex}`);
+	logger(`Text at cursor: "${beforeSnippet}|${afterSnippet}"`);
+}

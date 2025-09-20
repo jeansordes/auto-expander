@@ -1,0 +1,7 @@
+---
+description:
+globs: eslint.config.js
+alwaysApply: false
+---
+
+- **NEVER EDIT THIS FILE UNLESS EXPLICITLY ASKED TO DO SO**

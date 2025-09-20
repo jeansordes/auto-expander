@@ -3,6 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
+- Don't run "npm run build" or "npm run dev" when you are developing, there is already "npm run dev" runnings
 - **Always** keep the rendering code separated from the logic, so that you can easily test the logic without having to test the rendering
 - When implementing a feature, you first need to add a requirement to support the feature request in the requirements section of `specs.md`
 - Always favor a modular and functionnal approach (with pure functions and no side effects) so that we can more easily code tests

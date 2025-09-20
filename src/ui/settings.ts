@@ -11,6 +11,7 @@ import { ParsedSnippet } from '../types';
 export class AutoExpanderSettingTab extends PluginSettingTab {
 	plugin: AutoExpander;
 	private snippetEditor?: EditorView;
+	private debounceTimer?: number;
 
 	constructor(app: App, plugin: AutoExpander) {
 		super(app, plugin);
@@ -19,32 +20,16 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 
 	async display(): Promise<void> {
 		const {containerEl} = this;
-		this.snippetEditor?.destroy();
-		this.snippetEditor = undefined;
+
+		// Only destroy editor if container is being emptied, otherwise preserve state
+		if (containerEl.children.length > 0) {
+			this.snippetEditor?.destroy();
+			this.snippetEditor = undefined;
+		}
 
 		containerEl.empty();
 
 		containerEl.createEl('h2', {text: 'Auto Expander Settings'});
-
-		new Setting(containerEl)
-			.setName('Enable Plugin')
-			.setDesc('Toggle the auto expansion functionality')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enabled)
-				.onChange(async (value) => {
-					this.plugin.settings.enabled = value;
-					await this.plugin.saveSettings();
-				}));
-
-		containerEl.createEl('h3', {text: 'Snippets Configuration'});
-
-		// Error display
-		const errorEl = containerEl.createEl('div', {cls: 'setting-item'});
-		const errorDesc = errorEl.createEl('div', {cls: 'setting-item-description auto-expander-error auto-expander-error-hidden'});
-
-		// Success display
-		const successEl = containerEl.createEl('div', {cls: 'setting-item'});
-		const successDesc = successEl.createEl('div', {cls: 'setting-item-description auto-expander-success auto-expander-success-hidden'});
 
 		// Wrapper for full-width textarea
 		const textareaWrapper = containerEl.createEl('div', {cls: 'auto-expander-textarea-wrapper'});
@@ -52,10 +37,21 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		const snippetSetting = new Setting(textareaWrapper)
 			.setName('Snippets (JSONC)')
 			.setDesc('Define your text expansion snippets in JSONC format. Supports comments and flexible syntax.');
+			
+		// Status display (right above the editor)
+		const statusEl = snippetSetting.controlEl.createEl('div', {cls: 'auto-expander-status'});
 
 		const editorContainer = snippetSetting.controlEl.createDiv({cls: 'auto-expander-editor'});
-		const placeholder = '[\n  {\n    "trigger": "hello\\${0:space}",\n    "replacement": "Hello, World!",\n    "commands": ["editor:focus"]\n  }\n]';
-		let debounceTimer: number | undefined;
+
+		// Error display
+		const errorEl = statusEl.createEl('div', {cls: 'auto-expander-error auto-expander-error-hidden'});
+		const errorContent = errorEl.createEl('div', {cls: 'auto-expander-error-content'});
+
+		// Success display
+		const successEl = statusEl.createEl('div', {cls: 'auto-expander-success auto-expander-success-hidden'});
+		const successContent = successEl.createEl('div', {cls: 'auto-expander-success-content'});
+
+		const placeholder = '[\n  {\n    "trigger": "hello\\${0:space}",\n    "replacement": "Hello, World!",\n    "commands": ["editor:focus"]\n  }';
 
 		const jsonHighlightStyle = HighlightStyle.define([
 			{ tag: tags.string, color: 'var(--code-string, #a8ff60)' },
@@ -71,28 +67,32 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 
 		const renderResult = (result: { error?: string; invalidSnippets?: ParsedSnippet[] }) => {
 			// Clear previous messages
-			errorDesc.addClass('auto-expander-error-hidden');
-			errorDesc.textContent = '';
-			successDesc.addClass('auto-expander-success-hidden');
-			successDesc.textContent = '';
+			errorEl.addClass('auto-expander-error-hidden');
+			errorContent.empty();
+			successEl.addClass('auto-expander-success-hidden');
+			successContent.empty();
 
 			if (result.error) {
-				errorDesc.textContent = `❌ JSONC Error: ${result.error}`;
-				errorDesc.removeClass('auto-expander-error-hidden');
+				errorContent.createEl('div', {cls: 'auto-expander-error-title', text: 'JSONC Error'});
+				errorContent.createEl('div', {cls: 'auto-expander-error-message', text: result.error});
+				errorEl.removeClass('auto-expander-error-hidden');
 			} else if (result.invalidSnippets && result.invalidSnippets.length > 0) {
-				const errorMessages = result.invalidSnippets
-					.map((snippet) => {
-						const originalIndex = this.plugin.getParsedSnippets().indexOf(snippet);
-						return `Snippet ${originalIndex + 1}: ${snippet.error || 'Validation error'}`;
-					})
-					.join('\n');
-				errorDesc.textContent = `⚠️ Validation Errors:\n${errorMessages}`;
-				errorDesc.removeClass('auto-expander-error-hidden');
+				errorContent.createEl('div', {cls: 'auto-expander-error-title', text: 'Validation Errors'});
+				const errorList = errorContent.createEl('div', {cls: 'auto-expander-error-list'});
+				result.invalidSnippets.forEach((snippet) => {
+					const originalIndex = this.plugin.getParsedSnippets().indexOf(snippet);
+					errorList.createEl('div', {
+						cls: 'auto-expander-error-item',
+						text: `Snippet ${originalIndex + 1}: ${snippet.error || 'Validation error'}`
+					});
+				});
+				errorEl.removeClass('auto-expander-error-hidden');
 			} else {
 				const snippetCount = this.plugin.getParsedSnippets().length;
 				if (snippetCount > 0) {
-					successDesc.textContent = `✅ Successfully loaded ${snippetCount} snippet${snippetCount === 1 ? '' : 's'}`;
-					successDesc.removeClass('auto-expander-success-hidden');
+					successContent.createEl('div', {cls: 'auto-expander-success-title', text: 'Success'});
+					successContent.createEl('div', {cls: 'auto-expander-success-message', text: `Successfully loaded ${snippetCount} snippet${snippetCount === 1 ? '' : 's'}`});
+					successEl.removeClass('auto-expander-success-hidden');
 				}
 			}
 		};
@@ -100,15 +100,15 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		const applySnippetUpdate = async (value: string) => {
 			const result = await this.plugin.updateSnippets(value);
 			renderResult(result);
-			updateStatus();
 		};
 
 		const scheduleUpdate = (value: string) => {
-			if (debounceTimer !== undefined) {
-				window.clearTimeout(debounceTimer);
+			if (this.debounceTimer !== undefined) {
+				window.clearTimeout(this.debounceTimer);
 			}
-			debounceTimer = window.setTimeout(() => {
+			this.debounceTimer = window.setTimeout(() => {
 				void applySnippetUpdate(value);
+				this.debounceTimer = undefined; // Clear reference after execution
 			}, 300);
 		};
 
@@ -203,11 +203,11 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 			decorations: (value) => value.decorations
 		});
 
-		const state = EditorState.create({
+		const createEditorState = (wrapText: boolean) => EditorState.create({
 			doc: this.plugin.settings.snippetsJsonc,
 			extensions: [
 				json(),
-				EditorView.lineWrapping,
+				...(wrapText ? [EditorView.lineWrapping] : []),
 				keymap.of([indentWithTab]),
 				cmPlaceholder(placeholder),
 				syntaxHighlighting(jsonHighlightStyle, {fallback: true}),
@@ -220,33 +220,81 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 			]
 		});
 
-		this.snippetEditor = new EditorView({
-			state,
-			parent: editorContainer,
-		});
+		const state = createEditorState(this.plugin.settings.wrapText);
 
-		// Status information
-		const statusEl = containerEl.createEl('div', {cls: 'setting-item'});
-		statusEl.createEl('div', {cls: 'setting-item-name', text: 'Status'});
-		const statusDesc = statusEl.createEl('div', {cls: 'setting-item-description'});
+		try {
+			this.snippetEditor = new EditorView({
+				state,
+				parent: editorContainer,
+			});
+		} catch (error) {
+			console.error('Failed to create CodeMirror editor:', error);
+			// Fallback to a simple textarea if CodeMirror fails
+			const textarea = editorContainer.createEl('textarea', {
+				cls: 'auto-expander-fallback-textarea',
+				attr: { placeholder: placeholder, rows: 10 }
+			});
+			textarea.value = this.plugin.settings.snippetsJsonc;
+			textarea.addEventListener('input', (e) => {
+				const target = e.target;
+				if (target instanceof HTMLTextAreaElement) {
+					scheduleUpdate(target.value);
+				}
+			});
+			return;
+		}
 
-		const updateStatus = () => {
-			const snippets = this.plugin.getParsedSnippets();
-			const validCount = snippets.filter((s) => s.isValid).length;
-			const invalidCount = snippets.length - validCount;
+		// Text wrapping toggle
+		new Setting(containerEl)
+			.setName('Wrap text in editor')
+			.setDesc('Enable text wrapping in the snippets editor. When disabled, text will scroll horizontally.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.wrapText)
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ wrapText: value });
+					// Recreate editor with new wrapping setting
+					if (this.snippetEditor) {
+						const newState = createEditorState(value);
+						this.snippetEditor.setState(newState);
+					}
+				}));
 
-			if (snippets.length === 0) {
-				statusDesc.setText('No snippets configured');
-			} else if (invalidCount === 0) {
-				statusDesc.setText(`${validCount} snippet(s) loaded successfully`);
-			} else {
-				statusDesc.setText(`${validCount} valid, ${invalidCount} invalid snippet(s)`);
-			}
-		};
+		// Command delay setting
+		new Setting(containerEl)
+			.setName('Command Delay')
+			.setDesc('Delay in milliseconds between executing commands after snippet expansion (default: 100ms). Increase if commands interfere with each other.')
+			.addText(text => text
+				.setPlaceholder('100')
+				.setValue(this.plugin.settings.commandDelay.toString())
+				.onChange(async (value) => {
+					const delay = parseInt(value, 10);
+					if (!isNaN(delay) && delay >= 0 && delay <= 10000) {
+						await this.plugin.updateSettings({ commandDelay: delay });
+					}
+				}));
 
 		// Initial status update
 		const initialResult = await this.plugin.updateSnippets(this.plugin.settings.snippetsJsonc);
 		renderResult(initialResult);
-		updateStatus();
+	}
+
+	// Override hide method for proper cleanup
+	hide(): void {
+		// Clear any pending debounced updates
+		if (this.snippetEditor) {
+			// Ensure any pending updates are processed before hiding
+			const currentDoc = this.snippetEditor.state.doc.toString();
+			if (currentDoc !== this.plugin.settings.snippetsJsonc) {
+				void this.plugin.updateSnippets(currentDoc);
+			}
+		}
+
+		// Clear debounce timer
+		if (this.debounceTimer !== undefined) {
+			window.clearTimeout(this.debounceTimer);
+			this.debounceTimer = undefined;
+		}
+
+		super.hide();
 	}
 }

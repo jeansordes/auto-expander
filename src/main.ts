@@ -1,48 +1,105 @@
-import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
+import { Editor, MarkdownView, Plugin } from 'obsidian';
 import createDebug from 'debug';
 import pluginInfos from '../manifest.json';
-import { AutoExpanderSettings, DEFAULT_SETTINGS, ParsedSnippet } from './types';
-import { parseJsoncSnippets, validateAndParseSnippets, createSnippetMap } from './core';
+import { AutoExpanderSettings, ParsedSnippet } from './types';
 import { AutoExpanderSettingTab } from './ui/settings';
+import { SettingsService } from './services/settings-service';
+import { SnippetService } from './services/snippet-service';
+import { ExpansionService, TriggerContext } from './services/expansion-service';
+import { matchesTrigger } from './core';
 
 const log = createDebug(pluginInfos.id + ':main');
 
 export default class AutoExpander extends Plugin {
 	settings: AutoExpanderSettings;
 
-	// Parsed and validated snippets
-	private parsedSnippets: ParsedSnippet[] = [];
-	// Map of trigger actions to snippets for efficient lookup
-	private snippetMap: Map<string, ParsedSnippet[]> = new Map();
-	// Whether snippets are in a valid state
-	private snippetsValid = true;
+	// Service instances
+	private settingsService: SettingsService;
+	private snippetService: SnippetService;
+	private expansionService: ExpansionService;
+
+	// Event listener cleanup function
+	private unregisterExpansionListener?: () => void;
 
 	async onload() {
-		// Toggle debug output dynamically using debug.enable/disable
-        // Dev: enable our namespaces; Prod: disable all
-        try {
-            const isProd = process.env.NODE_ENV === 'production';
-            if (isProd) {
-                createDebug.disable();
-            } else {
-                createDebug.enable(pluginInfos.id + ':*');
-            }
-        } catch {
-            log("Debug toggling failed");
-        }
+		this.initializeServices();
+		this.configureDebugging();
+		await this.initializePlugin();
 
-        log("Plugin loading");
+		log("Plugin loaded successfully");
+	}
 
-		await this.loadSettings();
+	/**
+	 * Initialize service instances
+	 */
+	private initializeServices(): void {
+		this.settingsService = new SettingsService(this);
+		this.snippetService = new SnippetService();
+		this.expansionService = new ExpansionService(this.app);
+	}
+
+	/**
+	 * Configure debug logging based on environment
+	 */
+	private configureDebugging(): void {
+		try {
+			const isProd = process.env.NODE_ENV === 'production';
+			if (isProd) {
+				createDebug.disable();
+			} else {
+				createDebug.enable(pluginInfos.id + ':*');
+			}
+		} catch {
+			log("Debug toggling failed");
+		}
+	}
+
+	/**
+	 * Initialize plugin components and setup
+	 */
+	private async initializePlugin(): Promise<void> {
+		// Load settings
+		this.settings = await this.settingsService.loadSettings();
 
 		// Load and validate snippets
-		await this.loadSnippets();
+		await this.snippetService.loadSnippets(this.settings);
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+		// Set initial delays
+		this.expansionService.updateCommandDelay(this.settings.commandDelay);
+
+		// Add status bar item
+		this.setupStatusBarItem();
+
+		// Add editor command
+		this.addEditorCommand();
+
+		// Add settings tab
+		this.addSettingTab(new AutoExpanderSettingTab(this.app, this));
+
+		// Set up expansion mechanism
+		this.setupExpansionMechanism();
+
+		// Register global event listeners
+		this.registerGlobalEvents();
+	}
+
+	onunload() {
+		this.cleanup();
+		log("Plugin unloaded successfully");
+	}
+
+	/**
+	 * Add status bar item
+	 */
+	private setupStatusBarItem(): void {
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		statusBarItemEl.setText('Auto-Expander');
+	}
 
-		// This adds an editor command that can perform some operation on the current editor instance
+	/**
+	 * Add editor command
+	 */
+	private addEditorCommand(): void {
 		this.addCommand({
 			id: pluginInfos.id + '-editor-command',
 			name: pluginInfos.name + ' editor command',
@@ -51,62 +108,140 @@ export default class AutoExpander extends Plugin {
 				editor.replaceSelection(pluginInfos.name + ' Editor Command');
 			}
 		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new AutoExpanderSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-		log("Plugin unloading");
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
 	}
 
 	/**
-	 * Load and validate snippets from settings
+	 * Set up expansion mechanism using the expansion service
 	 */
-	private async loadSnippets(): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
+	private setupExpansionMechanism(): void {
+		if (this.unregisterExpansionListener) {
+			this.unregisterExpansionListener();
+		}
+
+		this.unregisterExpansionListener = this.expansionService.setupExpansionMechanism(
+			this.snippetService.areSnippetsValid(),
+			this.snippetService.getLastValidationError(),
+			(context) => this.handleTriggerKeyPressed(context),
+			(key, text, cursorIndex) => {
+				let actionType: string;
+				switch (key) {
+					case 'Tab': actionType = 'tab'; break;
+					case ' ': actionType = 'space'; break;
+					case 'Enter': actionType = 'newline'; break;
+					case 'Backspace': actionType = 'backspace'; break;
+					default: return false;
+				}
+				return this.wouldTriggerSnippet(text, cursorIndex, actionType);
+			}
+		);
+	}
+
+	/**
+	 * Register global event listeners
+	 */
+	private registerGlobalEvents(): void {
+		// No global event listeners needed for this plugin
+	}
+
+	/**
+	 * Handle trigger key presses
+	 */
+	private handleTriggerKeyPressed(context: TriggerContext): void {
 		try {
-			const { snippets, error: parseError } = parseJsoncSnippets(this.settings.snippetsJsonc);
+			const triggerAction = this.expansionService.getTriggerActionFromKey(context.triggerKey);
+			if (!triggerAction) return;
 
-			if (parseError) {
-				log('JSONC parsing failed:', parseError);
-				this.snippetsValid = false;
-				return { error: parseError };
-			}
+			log(`Trigger key pressed: ${context.triggerKey} (${triggerAction})`);
 
-			this.parsedSnippets = validateAndParseSnippets(snippets);
-			this.snippetMap = createSnippetMap(this.parsedSnippets);
-			this.snippetsValid = this.parsedSnippets.every(s => s.isValid);
+			// All trigger keys (Tab, Space, Enter, Backspace) are now handled by the prevention system
+			// in the keyboard handler, so we can proceed normally for all of them
 
-			const invalidCount = this.parsedSnippets.filter(s => !s.isValid).length;
-			const invalidSnippets = invalidCount > 0 ? this.parsedSnippets.filter(s => !s.isValid) : undefined;
-
-			if (this.parsedSnippets.length > 0 && invalidCount === 0) {
-				new Notice(`Loaded ${this.parsedSnippets.length} snippet(s) successfully.`);
-			}
-
-			log(`Loaded ${this.parsedSnippets.length} snippets (${invalidCount} invalid)`);
-			return { invalidSnippets };
+			this.expansionService.checkForSnippetTrigger(
+				context,
+				triggerAction,
+				this.snippetService.getSnippetMap(),
+				(trigger, isRegex) => this.snippetService.getCompiledTrigger(trigger, isRegex),
+				(editor, snippet, compiledTrigger, ctx, triggerAction) =>
+					this.expansionService.executeSnippet(editor, snippet, compiledTrigger, ctx, triggerAction)
+			);
 		} catch (error) {
-			log('Error loading snippets:', error);
-			this.snippetsValid = false;
-			return { error: error.message };
+			log('Error handling trigger key:', error);
+		}
+	}
+
+	/**
+	 * Check if a trigger action would activate any snippets at the current cursor position
+	 */ 
+	private wouldTriggerSnippet(text: string, cursorCharIndex: number, triggerAction: string): boolean {
+		try {
+			// Get snippets for this trigger action
+			const actionsToCheck = new Set<string>([triggerAction]);
+			if (triggerAction === 'enter') {
+				actionsToCheck.add('newline');
+			}
+			if (triggerAction === 'newline') {
+				actionsToCheck.add('enter');
+			}
+
+			const relevantSnippets: ParsedSnippet[] = [];
+			const snippetMap = this.snippetService.getSnippetMap();
+			for (const action of actionsToCheck) {
+				const snippetsForAction = snippetMap.get(action) || [];
+				for (const snippet of snippetsForAction) {
+					if (!relevantSnippets.includes(snippet)) {
+						relevantSnippets.push(snippet);
+					}
+				}
+			}
+
+			for (const snippet of relevantSnippets) {
+				if (!snippet.isValid) continue;
+
+				// Get or compile the trigger regex
+				const compiledTrigger = this.snippetService.getCompiledTrigger(snippet.trigger, snippet.regex);
+				if (!compiledTrigger) continue;
+
+				// Check if this snippet matches at the current cursor position
+				if (matchesTrigger(compiledTrigger, text, cursorCharIndex, triggerAction)) {
+					log(`${triggerAction} would trigger snippet: ${snippet.trigger}`);
+					return true;
+				}
+			}
+
+			return false;
+		} catch (error) {
+			log('Error checking if key would trigger snippet:', error);
+			return false;
+		}
+	}
+
+	/**
+	 * Clean up resources
+	 */
+	private cleanup(): void {
+		if (this.unregisterExpansionListener) {
+			this.unregisterExpansionListener();
+			this.unregisterExpansionListener = undefined;
+		}
+	}
+
+	/**
+	 * Update settings and reload snippets if necessary
+	 */
+	async updateSettings(newSettings: Partial<AutoExpanderSettings>): Promise<void> {
+		await this.settingsService.updateSettings(newSettings);
+		this.settings = await this.settingsService.loadSettings();
+
+		// Update delays if changed
+		if ('commandDelay' in newSettings) {
+			this.expansionService.updateCommandDelay(this.settings.commandDelay);
+		}
+
+		// Reload snippets if they might have changed
+		if ('snippetsJsonc' in newSettings) {
+			await this.snippetService.loadSnippets(this.settings);
+			// Update expansion mechanism with new settings
+			this.setupExpansionMechanism();
 		}
 	}
 
@@ -114,29 +249,65 @@ export default class AutoExpander extends Plugin {
 	 * Update snippet configuration
 	 */
 	async updateSnippets(snippetsJsonc: string): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
-		this.settings.snippetsJsonc = snippetsJsonc;
-		await this.saveSettings();
-		return await this.loadSnippets();
+		await this.settingsService.setSetting('snippetsJsonc', snippetsJsonc);
+		this.settings = await this.settingsService.loadSettings();
+		const result = await this.snippetService.loadSnippets(this.settings);
+		this.setupExpansionMechanism(); // Update expansion mechanism
+		return result;
 	}
 
 	/**
 	 * Get parsed snippets
 	 */
 	getParsedSnippets(): ParsedSnippet[] {
-		return [...this.parsedSnippets];
+		return this.snippetService.getParsedSnippets();
 	}
 
 	/**
 	 * Get snippet map for efficient lookup
 	 */
 	getSnippetMap(): Map<string, ParsedSnippet[]> {
-		return new Map(this.snippetMap);
+		return this.snippetService.getSnippetMap();
 	}
 
 	/**
 	 * Check if snippets are in a valid state
 	 */
 	areSnippetsValid(): boolean {
-		return this.snippetsValid;
+		return this.snippetService.areSnippetsValid();
+	}
+
+	/**
+	 * Get the last validation error message
+	 */
+	getLastValidationError(): string | null {
+		return this.snippetService.getLastValidationError();
+	}
+
+	/**
+	 * Reset snippets to the last valid configuration
+	 */
+	async resetToLastValidSnippets(): Promise<{ error?: string }> {
+		const result = await this.snippetService.resetToLastValidSnippets(this.settings);
+		if (!result.error) {
+			// Reload settings and update mechanism
+			this.settings = await this.settingsService.loadSettings();
+			this.setupExpansionMechanism();
+		}
+		return result;
+	}
+
+	/**
+	 * Get validation status with detailed information
+	 */
+	getValidationStatus(): {
+		isValid: boolean;
+		totalSnippets: number;
+		validSnippets: number;
+		invalidSnippets: number;
+		lastError: string | null;
+		canReset: boolean;
+	} {
+		return this.snippetService.getValidationStatus();
 	}
 }

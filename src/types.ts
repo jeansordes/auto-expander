@@ -8,6 +8,8 @@ export interface Snippet {
   replacement?: string | string[];
   /** Optional command IDs to execute after expansion */
   commands?: string | string[];
+  /** Whether the trigger should be treated as a regex pattern (no escaping) */
+  regex?: boolean;
 }
 
 /**
@@ -24,6 +26,8 @@ export interface ParsedSnippet {
   commands: string[];
   /** Parsed cursor marker options (e.g., ['space', 'tab', 'instant']) */
   cursorMarkerOptions: string[];
+  /** Whether the trigger should be treated as a regex pattern (no escaping) */
+  regex: boolean;
   /** Whether this snippet is valid and can be used */
   isValid: boolean;
   /** Error message if validation failed */
@@ -36,12 +40,15 @@ export interface ParsedSnippet {
 export interface AutoExpanderSettings {
   /** User-defined snippets as JSONC string */
   snippetsJsonc: string;
-  /** Whether the plugin is enabled */
-  enabled: boolean;
+  /** Whether to wrap text in the editor textarea */
+  wrapText: boolean;
+  /** Delay in milliseconds between executing commands after snippet expansion */
+  commandDelay: number;
 }
 
 /** Default settings for the plugin */
 export const DEFAULT_SETTINGS: AutoExpanderSettings = {
   snippetsJsonc: '',
-  enabled: true,
+  wrapText: false,
+  commandDelay: 100,
 };
