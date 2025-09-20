@@ -90,20 +90,28 @@ export class ExpansionService {
 				return;
 			}
 
-			if (event.key.length !== 1) {
+			if (event.key.length !== 1 && !this.isUnreliableInstantKey(event.key)) {
 				return;
 			}
 
 			const beforeText = editor.getValue();
 			const beforeCursor = editor.getCursor();
+			const beforeCharIndex = getCursorCharIndex(beforeText, beforeCursor);
 
 			window.setTimeout(() => {
 				const afterText = editor.getValue();
 				const afterCursor = editor.getCursor();
 				const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
+				const insertedText = this.extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
+				const normalizedKey = this.normalizeTriggerKey(event.key, insertedText);
+				if (normalizedKey !== event.key) {
+					log(`Normalized key '${event.key}' to '${normalizedKey}' for instant trigger handling`);
+				}
 
 				const context: TriggerContext = {
-					triggerKey: event.key,
+					triggerKey: normalizedKey,
+					originalKey: event.key,
+					insertedText,
 					beforeText,
 					beforeCursor,
 					afterText,
@@ -168,6 +176,8 @@ export class ExpansionService {
 
 		callback({
 			triggerKey: event.key,
+			originalKey: event.key,
+			insertedText: '',
 			beforeText: currentText,
 			beforeCursor: currentCursor,
 			afterText: currentText,
@@ -177,6 +187,44 @@ export class ExpansionService {
 		});
 
 		return true;
+	}
+
+	private extractInsertedText(
+		afterText: string,
+		beforeIndex: number,
+		afterIndex: number
+	): string {
+		if (afterIndex <= beforeIndex) {
+			return '';
+		}
+
+		const insertionLength = afterIndex - beforeIndex;
+		if (insertionLength <= 0) {
+			return '';
+		}
+
+		const start = Math.max(0, afterIndex - insertionLength);
+		return afterText.slice(start, afterIndex);
+	}
+
+	private normalizeTriggerKey(eventKey: string, insertedText: string): string {
+		if (!this.isUnreliableInstantKey(eventKey)) {
+			return eventKey;
+		}
+
+		if (!insertedText) {
+			return eventKey;
+		}
+
+		if (insertedText.length === 1) {
+			return insertedText;
+		}
+
+		return insertedText.slice(-1);
+	}
+
+	private isUnreliableInstantKey(key: string): boolean {
+		return key === 'Unidentified' || key === 'Process' || key === 'Dead';
 	}
 
 	getTriggerActionFromKey(key: string): string | null {

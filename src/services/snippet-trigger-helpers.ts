@@ -28,15 +28,28 @@ export function shouldEvaluateInstantTrigger(
 	triggerAction: string,
 	logger: (message: string) => void
 ): boolean {
-	if (triggerAction !== 'instant' || context.triggerKey.length !== 1) {
+	if (triggerAction !== 'instant') {
 		return true;
 	}
 
 	const triggerWithoutMarker = snippet.trigger.replace(/\$\{[^}]+\}$/, '');
-	const lastChar = triggerWithoutMarker.charAt(triggerWithoutMarker.length - 1);
-	const matchesLastChar = context.triggerKey === lastChar;
+	const expectedChar = triggerWithoutMarker.charAt(triggerWithoutMarker.length - 1);
+	if (!expectedChar) {
+		return true;
+	}
+
+	const typedCharCandidate = context.triggerKey.length === 1
+		? context.triggerKey
+		: context.insertedText.slice(-1);
+
+	if (!typedCharCandidate) {
+		logger(`Unable to resolve typed character for ${snippet.trigger}; key='${context.triggerKey}', inserted='${context.insertedText}'`);
+		return true;
+	}
+
+	const matchesLastChar = typedCharCandidate === expectedChar;
 	if (!matchesLastChar) {
-		logger(`Skipping instant trigger ${snippet.trigger}: typed '${context.triggerKey}' but expected '${lastChar}'`);
+		logger(`Skipping instant trigger ${snippet.trigger}: typed '${typedCharCandidate}' but expected '${expectedChar}'`);
 	}
 	return matchesLastChar;
 }

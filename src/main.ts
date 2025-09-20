@@ -151,7 +151,11 @@ export default class AutoExpander extends Plugin {
 			const triggerAction = this.expansionService.getTriggerActionFromKey(context.triggerKey);
 			if (!triggerAction) return;
 
-			log(`Trigger key pressed: ${context.triggerKey} (${triggerAction})`);
+			const keyDetails = context.triggerKey === context.originalKey
+				? context.triggerKey
+				: `${context.triggerKey} (original: ${context.originalKey})`;
+
+			log(`Trigger key pressed: ${keyDetails} (${triggerAction})`);
 
 			// All trigger keys (Tab, Space, Enter, Backspace) are now handled by the prevention system
 			// in the keyboard handler, so we can proceed normally for all of them
