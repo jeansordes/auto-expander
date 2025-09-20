@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* another attempt at fixing the ios keyboard event register ([0c894f1](https://github.com/jeansordes/auto-expander/commit/0c894f1ac2a201e8678b4a0005363ebd7dd941af))
+
+#  (2025-09-20)
+
+### Bug Fixes
+
 * improve character handling for instant triggers on iOS ([0da531a](https://github.com/jeansordes/auto-expander/commit/0da531ae003551c00a2e715ac9ac411acd5dc546))
 
 #  (2025-09-20)
