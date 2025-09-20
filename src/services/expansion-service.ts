@@ -4,10 +4,12 @@ import pluginInfos from '../../manifest.json';
 import type { ParsedSnippet } from '../types';
 import { matchesTrigger, compileTrigger } from '../core';
 import { getCursorCharIndex } from '../utils/editor-position';
-import { getGraphemeBeforeIndex, getLastNormalizedGrapheme, isSingleGrapheme } from '../utils/grapheme';
+import { getGraphemeBeforeIndex, isSingleGrapheme } from '../utils/grapheme';
 import { SnippetExecutor } from './snippet-executor';
 import type { TriggerContext } from './trigger-context';
 import { collectRelevantSnippets, shouldEvaluateInstantTrigger, logTriggerContext } from './snippet-trigger-helpers';
+import { createInstantInputHandlers } from './instant-input-handler';
+import { extractInsertedText, normalizeTriggerKey, isUnreliableInstantKey } from './trigger-normalization';
 
 const log = createDebug(`${pluginInfos.id}:expansion-service`);
 
@@ -26,6 +28,7 @@ const IGNORED_KEYS = new Set([
 
 const PREVENTABLE_KEYS = new Set(['Tab', ' ', 'Enter', 'Backspace']);
 
+const INSTANT_INPUT_SUPPRESSION_MS = 64;
 type CompiledTrigger = ReturnType<typeof compileTrigger>;
 
 export type { TriggerContext } from './trigger-context';
@@ -33,6 +36,7 @@ export type { TriggerContext } from './trigger-context';
 export class ExpansionService {
 	private readonly app: App;
 	private readonly snippetExecutor: SnippetExecutor;
+	private lastKeyboardInstantTimestamp: number | null = null;
 
 	constructor(app: App) {
 		this.app = app;
@@ -55,12 +59,27 @@ export class ExpansionService {
 			onTriggerKeyPressed,
 			shouldPreventKey
 		);
+		const inputHandlers = createInstantInputHandlers({
+			app: this.app,
+			snippetsValid,
+			lastValidationError,
+			isInteractionAllowed: this.isInteractionAllowed.bind(this),
+			isSnippetExecuting: () => this.snippetExecutor.isExecuting(),
+			onContext: onTriggerKeyPressed,
+			extractInsertedText: (afterText: string, beforeIndex: number, afterIndex: number) =>
+				extractInsertedText(afterText, beforeIndex, afterIndex),
+			shouldSuppressInstantInput: () => this.shouldSuppressInstantInput()
+		});
 
 		document.addEventListener('keydown', keyboardHandler, true);
+		document.addEventListener('beforeinput', inputHandlers.beforeInput, true);
+		document.addEventListener('input', inputHandlers.input, true);
 		log('Expansion mechanism initialized');
 
 		return () => {
 			document.removeEventListener('keydown', keyboardHandler, true);
+			document.removeEventListener('beforeinput', inputHandlers.beforeInput, true);
+			document.removeEventListener('input', inputHandlers.input, true);
 		};
 	}
 
@@ -91,7 +110,7 @@ export class ExpansionService {
 				return;
 			}
 
-			if (event.key.length !== 1 && !this.isUnreliableInstantKey(event.key)) {
+			if (event.key.length !== 1 && !isUnreliableInstantKey(event.key)) {
 				return;
 			}
 
@@ -103,29 +122,36 @@ export class ExpansionService {
 				const afterText = editor.getValue();
 				const afterCursor = editor.getCursor();
 				const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
-				const insertedText = this.extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
+				const insertedText = extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
 				const fallbackFromCursor = getGraphemeBeforeIndex(afterText, cursorCharIndex);
-				const normalizedKey = this.normalizeTriggerKey(event.key, insertedText, fallbackFromCursor);
+				const normalizedKey = normalizeTriggerKey(event.key, insertedText, fallbackFromCursor);
+				const anticipatedAction = this.getTriggerActionFromKey(normalizedKey);
+				if (anticipatedAction === 'instant') {
+					this.lastKeyboardInstantTimestamp = performance.now();
+				} else if (anticipatedAction) {
+					this.lastKeyboardInstantTimestamp = null;
+				}
 				if (normalizedKey !== event.key) {
 					log(`Normalized key '${event.key}' to '${normalizedKey}' for instant trigger handling`);
 				}
 
 				const context: TriggerContext = {
-					triggerKey: normalizedKey,
-					originalKey: event.key,
-					insertedText,
-					beforeText,
-					beforeCursor,
-					afterText,
-					afterCursor,
-					cursorCharIndex,
-					deletedChar: null
-				};
+				triggerKey: normalizedKey,
+				originalKey: event.key,
+				insertedText,
+				beforeText,
+				beforeCursor,
+				afterText,
+				afterCursor,
+				cursorCharIndex,
+				deletedChar: null
+			};
 
 				callback(context);
 			}, 0);
 		};
 	}
+
 
 	private isInteractionAllowed(
 		view: MarkdownView | null,
@@ -191,65 +217,6 @@ export class ExpansionService {
 		return true;
 	}
 
-	private extractInsertedText(
-		afterText: string,
-		beforeIndex: number,
-		afterIndex: number
-	): string {
-		if (afterIndex <= beforeIndex) {
-			return '';
-		}
-
-		const insertionLength = afterIndex - beforeIndex;
-		if (insertionLength <= 0) {
-			return '';
-		}
-
-		const start = Math.max(0, afterIndex - insertionLength);
-		return afterText.slice(start, afterIndex);
-	}
-
-	private normalizeTriggerKey(
-		eventKey: string,
-		insertedText: string,
-		fallbackFromCursor: string | null
-	): string {
-		if (!this.isUnreliableInstantKey(eventKey)) {
-			return this.normalizeSingleGrapheme(eventKey);
-		}
-
-		const insertedGrapheme = getLastNormalizedGrapheme(insertedText);
-		if (insertedGrapheme) {
-			return insertedGrapheme;
-		}
-
-		if (fallbackFromCursor) {
-			return fallbackFromCursor;
-		}
-
-		return this.normalizeSingleGrapheme(eventKey);
-	}
-
-	private normalizeSingleGrapheme(value: string): string {
-		if (!value) {
-			return value;
-		}
-
-		if (value.length === 1) {
-			return getLastNormalizedGrapheme(value) ?? value;
-		}
-
-		if (isSingleGrapheme(value)) {
-			return getLastNormalizedGrapheme(value) ?? value;
-		}
-
-		return value;
-	}
-
-	private isUnreliableInstantKey(key: string): boolean {
-		return key === 'Unidentified' || key === 'Process' || key === 'Dead';
-	}
-
 	getTriggerActionFromKey(key: string): string | null {
 		switch (key) {
 			case ' ': return 'space';
@@ -259,6 +226,16 @@ export class ExpansionService {
 			default:
 				return isSingleGrapheme(key) ? 'instant' : null;
 		}
+	}
+
+	private shouldSuppressInstantInput(): boolean {
+		if (this.lastKeyboardInstantTimestamp === null) {
+			return false;
+		}
+
+		const elapsed = performance.now() - this.lastKeyboardInstantTimestamp;
+		this.lastKeyboardInstantTimestamp = null;
+		return elapsed < INSTANT_INPUT_SUPPRESSION_MS;
 	}
 
 	checkForSnippetTrigger(
