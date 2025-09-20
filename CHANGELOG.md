@@ -1,5 +1,11 @@
 #  (2025-09-20)
 
+### Bug Fixes
+
+* improve character handling for instant triggers on iOS ([0da531a](https://github.com/jeansordes/auto-expander/commit/0da531ae003551c00a2e715ac9ac411acd5dc546))
+
+#  (2025-09-20)
+
 #  (2025-09-20)
 
 ### Features
