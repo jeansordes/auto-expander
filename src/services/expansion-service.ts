@@ -4,6 +4,7 @@ import pluginInfos from '../../manifest.json';
 import type { ParsedSnippet } from '../types';
 import { matchesTrigger, compileTrigger } from '../core';
 import { getCursorCharIndex } from '../utils/editor-position';
+import { getGraphemeBeforeIndex, getLastNormalizedGrapheme, isSingleGrapheme } from '../utils/grapheme';
 import { SnippetExecutor } from './snippet-executor';
 import type { TriggerContext } from './trigger-context';
 import { collectRelevantSnippets, shouldEvaluateInstantTrigger, logTriggerContext } from './snippet-trigger-helpers';
@@ -103,7 +104,8 @@ export class ExpansionService {
 				const afterCursor = editor.getCursor();
 				const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
 				const insertedText = this.extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
-				const normalizedKey = this.normalizeTriggerKey(event.key, insertedText);
+				const fallbackFromCursor = getGraphemeBeforeIndex(afterText, cursorCharIndex);
+				const normalizedKey = this.normalizeTriggerKey(event.key, insertedText, fallbackFromCursor);
 				if (normalizedKey !== event.key) {
 					log(`Normalized key '${event.key}' to '${normalizedKey}' for instant trigger handling`);
 				}
@@ -207,35 +209,41 @@ export class ExpansionService {
 		return afterText.slice(start, afterIndex);
 	}
 
-	private normalizeTriggerKey(eventKey: string, insertedText: string): string {
+	private normalizeTriggerKey(
+		eventKey: string,
+		insertedText: string,
+		fallbackFromCursor: string | null
+	): string {
 		if (!this.isUnreliableInstantKey(eventKey)) {
-			return eventKey;
+			return this.normalizeSingleGrapheme(eventKey);
 		}
 
-		if (!insertedText) {
-			return eventKey;
+		const insertedGrapheme = getLastNormalizedGrapheme(insertedText);
+		if (insertedGrapheme) {
+			return insertedGrapheme;
 		}
 
-		if (insertedText.length === 1) {
-			return insertedText;
+		if (fallbackFromCursor) {
+			return fallbackFromCursor;
 		}
 
-		// For iOS: if we have multiple characters inserted, check if it's a composed character
-		// or emoji that should be treated as a single unit for instant triggers
-		const lastChar = insertedText.slice(-1);
-		const secondLastChar = insertedText.length >= 2 ? insertedText.slice(-2, -1) : '';
+		return this.normalizeSingleGrapheme(eventKey);
+	}
 
-		// If the last character is a standard printable character, use it
-		if (lastChar && lastChar.charCodeAt(0) >= 32 && lastChar.charCodeAt(0) <= 126) {
-			return lastChar;
+	private normalizeSingleGrapheme(value: string): string {
+		if (!value) {
+			return value;
 		}
 
-		// For complex characters (emojis, accented chars), use the full inserted text if it's short
-		if (insertedText.length <= 4) {
-			return insertedText;
+		if (value.length === 1) {
+			return getLastNormalizedGrapheme(value) ?? value;
 		}
 
-		return lastChar || eventKey;
+		if (isSingleGrapheme(value)) {
+			return getLastNormalizedGrapheme(value) ?? value;
+		}
+
+		return value;
 	}
 
 	private isUnreliableInstantKey(key: string): boolean {
@@ -249,7 +257,7 @@ export class ExpansionService {
 			case 'Enter': return 'enter';
 			case 'Backspace': return 'backspace';
 			default:
-				return key.length === 1 ? 'instant' : null;
+				return isSingleGrapheme(key) ? 'instant' : null;
 		}
 	}
 

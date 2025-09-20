@@ -1,5 +1,6 @@
 import type { ParsedSnippet } from '../types';
 import type { TriggerContext } from './trigger-context';
+import { getGraphemeBeforeIndex, getLastNormalizedGrapheme } from '../utils/grapheme';
 
 export function collectRelevantSnippets(triggerAction: string, snippetMap: Map<string, ParsedSnippet[]>): ParsedSnippet[] {
 	const actions = new Set<string>([triggerAction]);
@@ -33,49 +34,28 @@ export function shouldEvaluateInstantTrigger(
 	}
 
 	const triggerWithoutMarker = snippet.trigger.replace(/\$\{[^}]+\}$/, '');
-	const expectedChar = triggerWithoutMarker.charAt(triggerWithoutMarker.length - 1);
+	const expectedChar = getLastNormalizedGrapheme(triggerWithoutMarker);
 	if (!expectedChar) {
 		return true;
 	}
 
-	let typedCharCandidate = context.triggerKey;
-
-	// For iOS/mobile: if triggerKey is unreliable, try to get it from insertedText
-	if (context.triggerKey === 'Unidentified' || context.triggerKey === 'Process' || context.triggerKey === 'Dead') {
-		if (context.insertedText.length === 1) {
-			typedCharCandidate = context.insertedText;
-		} else if (context.insertedText.length > 1) {
-			// Check if insertedText ends with expectedChar
-			const lastInsertedChar = context.insertedText.slice(-1);
-			const secondLastInsertedChar = context.insertedText.length >= 2 ? context.insertedText.slice(-2, -1) : '';
-
-			// If the last character matches expected, or if it's a standard ASCII char, use it
-			if (lastInsertedChar === expectedChar || (lastInsertedChar.charCodeAt(0) >= 32 && lastInsertedChar.charCodeAt(0) <= 126)) {
-				typedCharCandidate = lastInsertedChar;
-			} else if (context.insertedText.length <= 4) {
-				// For short multi-character insertions (emojis, accented chars), check if it contains expectedChar
-				typedCharCandidate = context.insertedText.includes(expectedChar) ? expectedChar : context.insertedText;
-			} else {
-				typedCharCandidate = lastInsertedChar;
-			}
-		}
-	}
-
-	// If we still don't have a valid candidate, fall back to insertedText logic
-	if (!typedCharCandidate || typedCharCandidate === 'Unidentified') {
-		typedCharCandidate = context.insertedText.length === 1
-			? context.insertedText
-			: context.insertedText.slice(-1);
-	}
+	const typedFromKey = context.triggerKey.length === 1 ? getLastNormalizedGrapheme(context.triggerKey) : null;
+	const typedFromInserted = getLastNormalizedGrapheme(context.insertedText);
+	const typedFromCursor = getGraphemeBeforeIndex(context.afterText, context.cursorCharIndex);
+	const typedCharCandidate = typedFromKey ?? typedFromInserted ?? typedFromCursor;
 
 	if (!typedCharCandidate) {
-		logger(`Unable to resolve typed character for ${snippet.trigger}; key='${context.triggerKey}', inserted='${context.insertedText}'`);
+		logger(
+			`Unable to resolve typed character for ${snippet.trigger}; key='${context.triggerKey}', inserted='${context.insertedText}', cursorIndex=${context.cursorCharIndex}`
+		);
 		return true;
 	}
 
 	const matchesLastChar = typedCharCandidate === expectedChar;
 	if (!matchesLastChar) {
-		logger(`Skipping instant trigger ${snippet.trigger}: typed '${typedCharCandidate}' but expected '${expectedChar}' (key='${context.triggerKey}', inserted='${context.insertedText}')`);
+		logger(
+			`Skipping instant trigger ${snippet.trigger}: typed '${typedCharCandidate}' but expected '${expectedChar}' (key='${context.triggerKey}', inserted='${context.insertedText}', cursorIndex=${context.cursorCharIndex})`
+		);
 	}
 	return matchesLastChar;
 }
