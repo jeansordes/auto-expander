@@ -4,8 +4,6 @@ import pluginInfos from '../manifest.json';
 
 const log = createDebug(pluginInfos.id + ':main');
 
-// Remember to rename these classes and interfaces!
-
 interface AutoExpanderSettings {
 	mySetting: string;
 }

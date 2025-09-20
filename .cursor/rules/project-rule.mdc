@@ -3,8 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-- Adopt a functionnal approach as much as possible in the project (rather than OOP) so that tests can be easier to code
-- When coding tests for a function, don't try to instanciate App, but call the function you are trying to test directly
+- **Always** keep the rendering code separated from the logic, so that you can easily test the logic without having to test the rendering
+- When implementing a feature, you first need to add a requirement to support the feature request in the requirements section of `specs.md`
+- Always favor a modular and functionnal approach (with pure functions and no side effects) so that we can more easily code tests
 - If you want to check the whole project consistency, use "npm run ci"
-- Don't try to create commits on your own, let the user handle this
-- Don't add accessibility attributes to the DOM, it's not needed for this plugin
