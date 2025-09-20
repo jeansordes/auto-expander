@@ -1,5 +1,55 @@
 # Auto Expander Plugin - Technical Specifications
 
+## Development Roadmap
+
+### Implementation Phases
+
+#### Phase 1: Foundation (Priority 1-4)
+**Goal**: Establish core plugin infrastructure and data model
+1. **#7** - Store and retrieve snippet data from plugin storage
+2. **#4** - Implement parsing of trigger, replacement, and commands fields from JSONC
+3. **#5** - Map snippets by trigger action for efficient lookup
+4. **#8** - Add JSONC parser and error handling for invalid/duplicate triggers
+
+#### Phase 2: Core Functionality (Priority 5-12)
+**Goal**: Build the essential expansion mechanism
+5. **#12** - Listen for all relevant keystrokes and editor actions
+6. **#13** - Capture editor state before and after modification
+7. **#18** - Implement regex to parse cursor markers and extract options
+8. **#6** - Support cursor marker option parsing in triggers
+9. **#14** - Detect and match snippet triggers on events
+10. **#15** - Insert replacement text and execute commands with delay
+11. **#25-27** - Regex vs Non-regex handling (unified matching logic)
+
+#### Phase 3: Enhanced Features (Priority 13-20)
+**Goal**: Add advanced functionality and safety features
+12. **#21-24** - Advanced regex compilation and matching
+13. **#19-20** - Various cursor marker syntaxes and option lists
+14. **#17** - Block expansion if any text is selected
+15. **#11** - Prevent expansion if validation fails (error state)
+
+#### Phase 4: User Experience & Polish (Priority 21-32)
+**Goal**: Comprehensive error handling and user feedback
+16. **#9** - Implement warning and success message display
+17. **#10** - Allow user to reset to last valid snippet configuration
+18. **#16** - Show warning on command failure but continue
+19. **#30** - Maintain error state and block expansions on validation failure
+20. **#31-32** - Advanced event handling and trigger detection
+
+#### Phase 5: Testing & Documentation (Priority 33-35)
+**Goal**: Final validation and user guidance
+21. **#3** - Test real-time expansion performance and UX
+22. **#2** - Ensure plugin works seamlessly on both desktop and mobile
+23. **#1** - Write introductory documentation for plugin usage
+
+### Key Implementation Notes
+
+- **Start with storage (#7)** - Foundation for all other features
+- **Complete Phase 1 before Phase 2** - Data model must be solid
+- **Test mobile compatibility (#2) early** - Avoid desktop-only assumptions
+- **Write documentation (#1) last** - Based on final implementation
+- **Duplicate issues**: #17/#28 (text selection), #16/#29 (command failure warnings)
+
 ## 1. Overview
 
 The Auto Expander plugin streamlines writing in Obsidian by expanding user-defined snippets into longer phrases or templates in real-time. It supports desktop and mobile, reducing repetitive typing and standardizing content.
