@@ -73,7 +73,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 			successContent.empty();
 
 			if (result.error) {
-				errorContent.createEl('div', {cls: 'auto-expander-error-title', text: 'JSONC Error'});
+				errorContent.createEl('div', {cls: 'auto-expander-error-title', text: 'JSONC Error (expansions are disabled)'});
 				errorContent.createEl('div', {cls: 'auto-expander-error-message', text: result.error});
 				errorEl.removeClass('auto-expander-error-hidden');
 			} else if (result.invalidSnippets && result.invalidSnippets.length > 0) {

@@ -1,4 +1,3 @@
-import { Notice } from 'obsidian';
 import createDebug from 'debug';
 import pluginInfos from '../../manifest.json';
 import { AutoExpanderSettings, ParsedSnippet } from '../types';
@@ -45,15 +44,13 @@ export class SnippetService {
 				// Save this as the last valid configuration
 				this.lastValidSnippets = settings.snippetsJsonc;
 				this.lastValidationError = null;
-				new Notice(`Loaded ${this.parsedSnippets.length} snippet(s) successfully.`);
 			} else if (invalidCount > 0) {
 				// Collect validation errors for better error reporting
 				const errorMessages = invalidSnippets?.map(s => s.error).filter(Boolean) || [];
-				this.lastValidationError = errorMessages.length > 0
+				this.lastValidationError = (errorMessages.length > 0
 					? `Validation errors: ${errorMessages.join('; ')}`
-					: 'Unknown validation error';
+					: 'Unknown validation error') + ' (expansions are disabled)';
 
-				new Notice(`Warning: ${invalidCount} snippet(s) have validation errors. Expansions are disabled.`, 5000);
 			}
 
 			log(`Loaded ${this.parsedSnippets.length} snippets (${invalidCount} invalid)`);
