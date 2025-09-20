@@ -217,7 +217,9 @@ const parseSearchString = searchString => {
 - [ ] TODO: [#29](https://github.com/jeansordes/auto-expander/issues/29) Show warning if a command fails during expansion.
 - [ ] TODO: [#30](https://github.com/jeansordes/auto-expander/issues/30) Maintain error state and block expansions on validation failure.
 
----
+## 9. Settings Experience
+
+- The snippets configuration editor in settings must provide JSONC syntax colorization (highlighting) so users can author snippets with clear visual feedback.
 
 ## How to get the text before the modification happened (non-blocking)
 

@@ -1,8 +1,67 @@
-/*
+/* Auto Expander Settings Styles */
+.auto-expander-error {
+    color: var(--text-error);
+    white-space: pre-line;
+    font-family: var(--font-interface);
+    margin-top: 8px;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.auto-expander-error-hidden {
+    display: none;
+}
 
-If your plugin does not need CSS, delete this file.
+.auto-expander-success {
+    color: var(--text-success);
+    font-family: var(--font-interface);
+    margin-top: 8px;
+}
 
-*/
+.auto-expander-success-hidden {
+    display: none;
+}
+
+/* Make textarea full width by overriding the flex layout */
+.auto-expander-textarea-wrapper .setting-item {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.auto-expander-textarea-wrapper .setting-item-info {
+    margin-bottom: 8px;
+}
+
+.auto-expander-textarea-wrapper .setting-item-control {
+    width: 100%;
+}
+
+.auto-expander-editor {
+    width: 100%;
+}
+
+.auto-expander-editor .cm-editor {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+    font-family: var(--font-monospace);
+    min-height: 200px;
+}
+
+.auto-expander-editor .cm-editor.cm-focused {
+    box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.auto-expander-editor .cm-content {
+    font-family: var(--font-monospace);
+    padding: 12px 16px;
+    text-align: left;
+    direction: ltr;
+}
+
+.auto-expander-editor .cm-placeholder {
+    color: var(--text-muted);
+}
+
+.auto-expander-editor .cm-jsonc-comment {
+    color: var(--code-comment, var(--text-muted));
+    font-style: italic;
+}
