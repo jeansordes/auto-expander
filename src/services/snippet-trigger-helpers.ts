@@ -38,9 +38,35 @@ export function shouldEvaluateInstantTrigger(
 		return true;
 	}
 
-	const typedCharCandidate = context.triggerKey.length === 1
-		? context.triggerKey
-		: context.insertedText.slice(-1);
+	let typedCharCandidate = context.triggerKey;
+
+	// For iOS/mobile: if triggerKey is unreliable, try to get it from insertedText
+	if (context.triggerKey === 'Unidentified' || context.triggerKey === 'Process' || context.triggerKey === 'Dead') {
+		if (context.insertedText.length === 1) {
+			typedCharCandidate = context.insertedText;
+		} else if (context.insertedText.length > 1) {
+			// Check if insertedText ends with expectedChar
+			const lastInsertedChar = context.insertedText.slice(-1);
+			const secondLastInsertedChar = context.insertedText.length >= 2 ? context.insertedText.slice(-2, -1) : '';
+
+			// If the last character matches expected, or if it's a standard ASCII char, use it
+			if (lastInsertedChar === expectedChar || (lastInsertedChar.charCodeAt(0) >= 32 && lastInsertedChar.charCodeAt(0) <= 126)) {
+				typedCharCandidate = lastInsertedChar;
+			} else if (context.insertedText.length <= 4) {
+				// For short multi-character insertions (emojis, accented chars), check if it contains expectedChar
+				typedCharCandidate = context.insertedText.includes(expectedChar) ? expectedChar : context.insertedText;
+			} else {
+				typedCharCandidate = lastInsertedChar;
+			}
+		}
+	}
+
+	// If we still don't have a valid candidate, fall back to insertedText logic
+	if (!typedCharCandidate || typedCharCandidate === 'Unidentified') {
+		typedCharCandidate = context.insertedText.length === 1
+			? context.insertedText
+			: context.insertedText.slice(-1);
+	}
 
 	if (!typedCharCandidate) {
 		logger(`Unable to resolve typed character for ${snippet.trigger}; key='${context.triggerKey}', inserted='${context.insertedText}'`);
@@ -49,7 +75,7 @@ export function shouldEvaluateInstantTrigger(
 
 	const matchesLastChar = typedCharCandidate === expectedChar;
 	if (!matchesLastChar) {
-		logger(`Skipping instant trigger ${snippet.trigger}: typed '${typedCharCandidate}' but expected '${expectedChar}'`);
+		logger(`Skipping instant trigger ${snippet.trigger}: typed '${typedCharCandidate}' but expected '${expectedChar}' (key='${context.triggerKey}', inserted='${context.insertedText}')`);
 	}
 	return matchesLastChar;
 }

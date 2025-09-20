@@ -220,7 +220,22 @@ export class ExpansionService {
 			return insertedText;
 		}
 
-		return insertedText.slice(-1);
+		// For iOS: if we have multiple characters inserted, check if it's a composed character
+		// or emoji that should be treated as a single unit for instant triggers
+		const lastChar = insertedText.slice(-1);
+		const secondLastChar = insertedText.length >= 2 ? insertedText.slice(-2, -1) : '';
+
+		// If the last character is a standard printable character, use it
+		if (lastChar && lastChar.charCodeAt(0) >= 32 && lastChar.charCodeAt(0) <= 126) {
+			return lastChar;
+		}
+
+		// For complex characters (emojis, accented chars), use the full inserted text if it's short
+		if (insertedText.length <= 4) {
+			return insertedText;
+		}
+
+		return lastChar || eventKey;
 	}
 
 	private isUnreliableInstantKey(key: string): boolean {
