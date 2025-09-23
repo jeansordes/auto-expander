@@ -34,19 +34,6 @@ interface InstantInputHandlerOptions {
 	shouldSuppressInstantInput: () => boolean;
 }
 
-function isEventWithinView(event: Event, view: MarkdownView | null): view is MarkdownView {
-	if (!view) {
-		return false;
-	}
-
-	const target = event.target;
-	if (!target || !(target instanceof Node)) {
-		return false;
-	}
-
-	return view.containerEl.contains(target);
-}
-
 export function createInstantInputHandlers(options: InstantInputHandlerOptions): {
 	beforeInput: (event: InputEvent) => void;
 	input: (event: InputEvent) => void;
@@ -61,9 +48,6 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 
 		const activeView = options.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!options.isInteractionAllowed(activeView, options.snippetsValid, options.lastValidationError)) {
-			return;
-		}
-		if (!isEventWithinView(event, activeView)) {
 			return;
 		}
 
@@ -102,9 +86,6 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 
 		const activeView = options.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!options.isInteractionAllowed(activeView, options.snippetsValid, options.lastValidationError)) {
-			return;
-		}
-		if (!isEventWithinView(event, activeView)) {
 			return;
 		}
 
@@ -148,9 +129,6 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 
 		const activeView = options.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!options.isInteractionAllowed(activeView, options.snippetsValid, options.lastValidationError)) {
-			return;
-		}
-		if (!isEventWithinView(event, activeView)) {
 			return;
 		}
 
