@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* **mobile:** enhance logging for snippet execution and trigger matching ([ec06152](https://github.com/jeansordes/auto-expander/commit/ec06152de51088dbef07ca72758bc0be5609b0f1))
+
+#  (2025-09-23)
+
+### Bug Fixes
+
 * use separate tag patterns for better GitHub Actions compatibility ([6096dfe](https://github.com/jeansordes/auto-expander/commit/6096dfe6aa2b08fb16a1cf26fafef181c2c08eae))
 
 #  (2025-09-23)
