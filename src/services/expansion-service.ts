@@ -74,12 +74,18 @@ export class ExpansionService {
 		document.addEventListener('keydown', keyboardHandler, true);
 		document.addEventListener('beforeinput', inputHandlers.beforeInput, true);
 		document.addEventListener('input', inputHandlers.input, true);
+		if (inputHandlers.keydown) {
+			document.addEventListener('keydown', inputHandlers.keydown, true);
+		}
 		log('Expansion mechanism initialized');
 
 		return () => {
 			document.removeEventListener('keydown', keyboardHandler, true);
 			document.removeEventListener('beforeinput', inputHandlers.beforeInput, true);
 			document.removeEventListener('input', inputHandlers.input, true);
+			if (inputHandlers.keydown) {
+				document.removeEventListener('keydown', inputHandlers.keydown, true);
+			}
 		};
 	}
 

@@ -9,6 +9,12 @@ const INSTANT_INPUT_TYPES = new Set([
 	'insertCompositionText'
 ]);
 
+// Detect iOS devices where beforeinput/input events are unreliable for character input
+const isIOS = (): boolean => {
+	return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
+};
+
 interface PendingInputState {
 	beforeText: string;
 	beforeCursor: ReturnType<Editor['getCursor']>;
@@ -44,6 +50,7 @@ function isEventWithinView(event: Event, view: MarkdownView | null): view is Mar
 export function createInstantInputHandlers(options: InstantInputHandlerOptions): {
 	beforeInput: (event: InputEvent) => void;
 	input: (event: InputEvent) => void;
+	keydown?: (event: KeyboardEvent) => void;
 } {
 	let pendingInstantInput: PendingInputState | null = null;
 
@@ -130,8 +137,91 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 		options.onContext(context);
 	};
 
-	return {
+	// iOS fallback: use keydown events when beforeinput/input events don't work reliably
+	const handleKeydownForIOS = (event: KeyboardEvent) => {
+		// Only handle printable characters, ignore modifier keys, navigation keys, etc.
+		if (event.ctrlKey || event.metaKey || event.altKey ||
+			event.key.length > 1 ||
+			event.key === ' ' && event.shiftKey) { // Ignore shift+space which is handled elsewhere
+			return;
+		}
+
+		const activeView = options.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!options.isInteractionAllowed(activeView, options.snippetsValid, options.lastValidationError)) {
+			return;
+		}
+		if (!isEventWithinView(event, activeView)) {
+			return;
+		}
+
+		const editor = activeView.editor;
+		if (options.isSnippetExecuting()) {
+			return;
+		}
+		if (editor.somethingSelected()) {
+			return;
+		}
+
+		// Check if this is a composition event (IME input)
+		if (event.isComposing) {
+			return;
+		}
+
+		if (options.shouldSuppressInstantInput()) {
+			return;
+		}
+
+		const beforeText = editor.getValue();
+		const beforeCursor = editor.getCursor();
+		const beforeCharIndex = getCursorCharIndex(beforeText, beforeCursor);
+
+		// Create a synthetic trigger context for the key that was pressed
+		const triggerKey = event.key;
+		const context: TriggerContext = {
+			triggerKey,
+			originalKey: triggerKey,
+			insertedText: triggerKey,
+			beforeText,
+			beforeCursor,
+			afterText: beforeText, // Will be updated after the key is actually inserted
+			afterCursor: beforeCursor, // Will be updated after the key is actually inserted
+			cursorCharIndex: beforeCharIndex,
+			deletedChar: null
+		};
+
+		// Use setTimeout to let the key insertion happen first
+		setTimeout(() => {
+			const afterText = editor.getValue();
+			const afterCursor = editor.getCursor();
+			const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
+
+			// Verify the key was actually inserted
+			const expectedCharIndex = beforeCharIndex + triggerKey.length;
+			if (cursorCharIndex === expectedCharIndex) {
+				const updatedContext: TriggerContext = {
+					...context,
+					afterText,
+					afterCursor,
+					cursorCharIndex
+				};
+				options.onContext(updatedContext);
+			}
+		}, 0);
+	};
+
+	const handlers: {
+		beforeInput: (event: InputEvent) => void;
+		input: (event: InputEvent) => void;
+		keydown?: (event: KeyboardEvent) => void;
+	} = {
 		beforeInput: captureBeforeInput,
 		input: handleInput
 	};
+
+	// Add iOS-specific keydown handler as fallback
+	if (isIOS()) {
+		handlers.keydown = handleKeydownForIOS;
+	}
+
+	return handlers;
 }
