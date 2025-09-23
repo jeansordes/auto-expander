@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView } from 'obsidian';
 import { getCursorCharIndex } from '../utils/editor-position';
 import { getLastNormalizedGrapheme } from '../utils/grapheme';
 import type { TriggerContext } from './trigger-context';
+import type { DebugEventPayload } from './expansion-service';
 
 const INSTANT_INPUT_TYPES = new Set([
 	'insertText',
@@ -32,6 +33,7 @@ interface InstantInputHandlerOptions {
 	onContext: (context: TriggerContext) => void;
 	extractInsertedText: (afterText: string, beforeIndex: number, afterIndex: number) => string;
 	shouldSuppressInstantInput: () => boolean;
+	debugNotifier?: (payload: DebugEventPayload) => void;
 }
 
 export function createInstantInputHandlers(options: InstantInputHandlerOptions): {
@@ -40,6 +42,7 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 	keydown?: (event: KeyboardEvent) => void;
 } {
 	let pendingInstantInput: PendingInputState | null = null;
+	const debug = options.debugNotifier;
 
 	const captureBeforeInput = (event: InputEvent) => {
 		if (!INSTANT_INPUT_TYPES.has(event.inputType)) {
@@ -50,6 +53,15 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 		if (!options.isInteractionAllowed(activeView, options.snippetsValid, options.lastValidationError)) {
 			return;
 		}
+
+		debug?.({
+			source: 'beforeinput',
+			inputType: event.inputType,
+			data: event.data ?? null,
+			metadata: {
+				supportsInputType: INSTANT_INPUT_TYPES.has(event.inputType)
+			}
+		});
 
 		const editor = activeView.editor;
 		if (options.isSnippetExecuting()) {
@@ -103,6 +115,17 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 		}
 
 		const triggerKey = getLastNormalizedGrapheme(insertedText) ?? insertedText;
+		debug?.({
+			source: 'input',
+			inputType: event.inputType,
+			insertedText,
+			data: pending.data ?? null,
+			normalizedKey: triggerKey,
+			metadata: {
+				cursorCharIndex,
+				beforeCharIndex: pending.beforeCharIndex
+			}
+		});
 		const context: TriggerContext = {
 			triggerKey,
 			originalKey: pending.data ?? triggerKey,
@@ -153,6 +176,14 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 		const beforeCursor = editor.getCursor();
 		const beforeCharIndex = getCursorCharIndex(beforeText, beforeCursor);
 
+		debug?.({
+			source: 'ios-keydown',
+			eventKey: event.key,
+			metadata: {
+				cursorCharIndex: beforeCharIndex
+			}
+		});
+
 		// Create a synthetic trigger context for the key that was pressed
 		const triggerKey = event.key;
 		const context: TriggerContext = {
@@ -172,6 +203,7 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 			const afterText = editor.getValue();
 			const afterCursor = editor.getCursor();
 			const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
+			const inserted = options.extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
 
 			// Verify the key was actually inserted
 			const expectedCharIndex = beforeCharIndex + triggerKey.length;
@@ -182,6 +214,15 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 					afterCursor,
 					cursorCharIndex
 				};
+				debug?.({
+					source: 'ios-keydown',
+					eventKey: triggerKey,
+					normalizedKey: triggerKey,
+					insertedText: inserted,
+					metadata: {
+						cursorCharIndex
+					}
+				});
 				options.onContext(updatedContext);
 			}
 		}, 0);

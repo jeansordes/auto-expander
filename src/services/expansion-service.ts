@@ -33,10 +33,21 @@ type CompiledTrigger = ReturnType<typeof compileTrigger>;
 
 export type { TriggerContext } from './trigger-context';
 
+export interface DebugEventPayload {
+	source: 'keydown' | 'beforeinput' | 'input' | 'ios-keydown';
+	eventKey?: string;
+	normalizedKey?: string;
+	insertedText?: string;
+	inputType?: string;
+	data?: string | null;
+	metadata?: Record<string, unknown>;
+}
+
 export class ExpansionService {
 	private readonly app: App;
 	private readonly snippetExecutor: SnippetExecutor;
 	private lastKeyboardInstantTimestamp: number | null = null;
+	private debugNotifier?: (payload: DebugEventPayload) => void;
 
 	constructor(app: App) {
 		this.app = app;
@@ -51,8 +62,10 @@ export class ExpansionService {
 		snippetsValid: boolean,
 		lastValidationError: string | null,
 		onTriggerKeyPressed: (context: TriggerContext) => void,
-		shouldPreventKey?: (key: string, text: string, cursorIndex: number) => boolean
+		shouldPreventKey?: (key: string, text: string, cursorIndex: number) => boolean,
+		debugNotifier?: (payload: DebugEventPayload) => void
 	): () => void {
+		this.debugNotifier = debugNotifier;
 		const keyboardHandler = this.createKeyboardHandler(
 			snippetsValid,
 			lastValidationError,
@@ -68,7 +81,8 @@ export class ExpansionService {
 			onContext: onTriggerKeyPressed,
 			extractInsertedText: (afterText: string, beforeIndex: number, afterIndex: number) =>
 				extractInsertedText(afterText, beforeIndex, afterIndex),
-			shouldSuppressInstantInput: () => this.shouldSuppressInstantInput()
+			shouldSuppressInstantInput: () => this.shouldSuppressInstantInput(),
+			debugNotifier: (payload) => this.notifyDebug(payload)
 		});
 
 		document.addEventListener('keydown', keyboardHandler, true);
@@ -152,6 +166,19 @@ export class ExpansionService {
 				cursorCharIndex,
 				deletedChar: null
 			};
+
+				this.notifyDebug({
+					source: 'keydown',
+					eventKey: event.key,
+					normalizedKey,
+					insertedText,
+					metadata: {
+						anticipatedAction,
+						beforeCharIndex,
+						cursorCharIndex,
+						unreliable: isUnreliableInstantKey(event.key)
+					}
+				});
 
 				callback(context);
 			}, 0);
@@ -242,6 +269,10 @@ export class ExpansionService {
 		const elapsed = performance.now() - this.lastKeyboardInstantTimestamp;
 		this.lastKeyboardInstantTimestamp = null;
 		return elapsed < INSTANT_INPUT_SUPPRESSION_MS;
+	}
+
+	private notifyDebug(payload: DebugEventPayload): void {
+		this.debugNotifier?.(payload);
 	}
 
 	checkForSnippetTrigger(

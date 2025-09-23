@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import { indentWithTab } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
@@ -272,6 +272,63 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 						await this.plugin.updateSettings({ commandDelay: delay });
 					}
 				}));
+
+		new Setting(containerEl)
+			.setName('Show keyboard debug notices')
+			.setDesc('Display a notice for each keyboard/input event. Useful for diagnosing mobile issues (may be noisy).')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.mobileDebugNotices)
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ mobileDebugNotices: value });
+				}));
+
+		const logSetting = new Setting(containerEl)
+			.setName('Debug log')
+			.setDesc('Captured debug output for this session. Share these details when reporting issues.');
+
+		const logTextArea = logSetting.controlEl.createEl('textarea', {
+			cls: 'auto-expander-log-output',
+			attr: { readonly: 'true', rows: '10', spellcheck: 'false' }
+		});
+
+		const refreshLogs = () => {
+			logTextArea.value = this.plugin.getDebugLog();
+		};
+
+		refreshLogs();
+
+		logSetting.addButton((button) =>
+			button
+				.setButtonText('Refresh')
+				.onClick(() => refreshLogs())
+		);
+		logSetting.addButton((button) =>
+			button
+				.setButtonText('Copy')
+				.setCta()
+				.onClick(async () => {
+					try {
+						if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+							await navigator.clipboard.writeText(logTextArea.value);
+							new Notice('Debug log copied to clipboard');
+						} else {
+							throw new Error('Clipboard API unavailable');
+						}
+					} catch (error) {
+						console.error('Failed to copy debug log', error);
+						new Notice('Unable to copy debug log. Please select and copy manually.');
+					}
+				})
+		);
+		logSetting.addButton((button) =>
+			button
+				.setButtonText('Clear')
+				.setWarning()
+				.onClick(() => {
+					this.plugin.clearDebugLog();
+					refreshLogs();
+				})
+		);
 
 		// Initial status update
 		const initialResult = await this.plugin.updateSnippets(this.plugin.settings.snippetsJsonc);
