@@ -2,6 +2,14 @@
 
 ### Bug Fixes
 
+* properly parse version numbers in release script to avoid NaN ([3aaa41d](https://github.com/jeansordes/auto-expander/commit/3aaa41d3c4550c2feade26c3a8adac6c4701da9f))
+* simplify tag pattern to support both normal and beta releases ([ab11f86](https://github.com/jeansordes/auto-expander/commit/ab11f863feb3137b7140ace95dfff0f716222088))
+* streamline instant trigger handling logic in ExpansionService ([973e0e4](https://github.com/jeansordes/auto-expander/commit/973e0e4788cb78e9d02579d4b89b025055100527))
+
+#  (2025-09-23)
+
+### Bug Fixes
+
 * defer instant trigger handling when text not yet inserted ([ea3efd8](https://github.com/jeansordes/auto-expander/commit/ea3efd8ae3842f1a16f74f089453510afe871a96))
 * update release workflow to support both normal and beta releases ([760de1a](https://github.com/jeansordes/auto-expander/commit/760de1a5d2b516f8eff15713469fa2bb3f89c08d))
 
