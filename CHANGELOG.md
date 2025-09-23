@@ -1,5 +1,12 @@
 #  (2025-09-23)
 
+### Bug Fixes
+
+* defer instant trigger handling when text not yet inserted ([ea3efd8](https://github.com/jeansordes/auto-expander/commit/ea3efd8ae3842f1a16f74f089453510afe871a96))
+* update release workflow to support both normal and beta releases ([760de1a](https://github.com/jeansordes/auto-expander/commit/760de1a5d2b516f8eff15713469fa2bb3f89c08d))
+
+#  (2025-09-23)
+
 ### Features
 
 * add debug logging for keyboard/input events ([129264f](https://github.com/jeansordes/auto-expander/commit/129264faf748212b54da121e20a921f79f67ea8c))
