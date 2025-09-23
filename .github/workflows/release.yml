@@ -4,8 +4,6 @@ on:
     push:
         tags:
             - "[0-9]+.[0-9]+.[0-9]+(-beta.[0-9]+)?" # Run workflow on version tags, e.g. 1.0.0 or 1.0.0-beta.0
-        branches:
-            - master # Add this to run on pushes to master branch
     workflow_dispatch: # Add this to enable manual triggering
 
 permissions:
