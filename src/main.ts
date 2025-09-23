@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Plugin, Notice } from 'obsidian';
+import { Editor, MarkdownView, Plugin } from 'obsidian';
 import logService from './services/log-service';
 import createDebug from 'debug';
 import pluginInfos from '../manifest.json';
@@ -232,13 +232,6 @@ export default class AutoExpander extends Plugin {
 		}
 	}
 
-	getDebugLog(): string {
-		return this.logService.getLogString();
-	}
-
-	clearDebugLog(): void {
-		this.logService.clear();
-	}
 
 	refreshExpansionMechanism(): void {
 		this.setupExpansionMechanism();
