@@ -126,6 +126,13 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 				beforeCharIndex: pending.beforeCharIndex
 			}
 		});
+
+		// On iOS, use the iOS-specific keydown handler instead of the input handler
+		// to avoid race conditions with text insertion timing
+		if (isIOS()) {
+			return;
+		}
+
 		const context: TriggerContext = {
 			triggerKey,
 			originalKey: pending.data ?? triggerKey,
