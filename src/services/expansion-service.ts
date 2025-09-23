@@ -290,8 +290,10 @@ export class ExpansionService {
 		onSnippetMatch: (editor: Editor, snippet: ParsedSnippet, compiledTrigger: CompiledTrigger, ctx: TriggerContext, action: string) => void
 	): void {
 		try {
-			log(`Checking triggers: action=${triggerAction}, cursor=${context.afterCursor.ch} (charIndex=${context.cursorCharIndex}), key=${context.triggerKey}`);
+			log(`Checking triggers: action=${triggerAction}, cursor=${context.afterCursor.ch} (charIndex=${context.cursorCharIndex}), key=${context.triggerKey}, afterText length=${context.afterText.length}`);
+			log(`After text: "${context.afterText.substring(Math.max(0, context.cursorCharIndex - 10), context.cursorCharIndex + 10)}"`);
 			const snippets = collectRelevantSnippets(triggerAction, snippetMap);
+			log(`Found ${snippets.length} snippets for action '${triggerAction}': ${snippets.map(s => s.trigger).join(', ')}`);
 			for (const snippet of snippets) {
 				if (!snippet.isValid) {
 					continue;
@@ -312,15 +314,20 @@ export class ExpansionService {
 				logTriggerContext(log, snippet.trigger, textToCheck, cursorIndex);
 
 				if (!matchesTrigger(compiledTrigger, textToCheck, cursorIndex, triggerAction)) {
+					log(`Trigger "${snippet.trigger}" did not match at cursor position ${cursorIndex}`);
 					continue;
 				}
 
+				log(`Trigger "${snippet.trigger}" MATCHED! Executing snippet...`);
+
 				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				if (!activeView?.editor) {
+					log(`No active markdown view found, cannot execute snippet`);
 					return;
 				}
 
 				onSnippetMatch(activeView.editor, snippet, compiledTrigger, context, triggerAction);
+				log(`Snippet execution initiated for "${snippet.trigger}"`);
 				break;
 			}
 		} catch (error) {

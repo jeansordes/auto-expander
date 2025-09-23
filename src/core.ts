@@ -178,11 +178,11 @@ function eventTypeAllowed(eventType: string, options: string[]): boolean {
  * Handles both explicit regex triggers and standard cursor marker triggers
  */
 export function matchesTrigger(
-	compiledTrigger: { regex: RegExp; options: string[]; isExplicitRegex?: boolean; allowsFlexibleCursor?: boolean },
-	input: string,
-	cursorPos: number,
-	eventType: string
-): boolean {
+		compiledTrigger: { regex: RegExp; options: string[]; isExplicitRegex?: boolean; allowsFlexibleCursor?: boolean },
+		input: string,
+		cursorPos: number,
+		eventType: string
+	): boolean {
 	const regex = compiledTrigger.regex;
 	let match: RegExpExecArray | null = null;
 	let matchFound = false;
@@ -192,7 +192,7 @@ export function matchesTrigger(
 	const startTime = Date.now();
 
 	try {
-		log(`Matching trigger against text: "${input}" (cursor at ${cursorPos})`);
+		log(`Matching trigger (pattern: /${regex.source}/${regex.flags}) against text: "${input}" (cursor at ${cursorPos}, eventType: ${eventType})`);
 
 		regex.lastIndex = 0;
 
@@ -279,7 +279,9 @@ export function matchesTrigger(
 			log(`Event type check: eventType=${eventType}, options=${compiledTrigger.options.join(',')}, allowed=${optionsAllowed}`);
 		}
 
-		return optionsAllowed;
+		const finalResult = optionsAllowed;
+		log(`Trigger match result: ${finalResult}`);
+		return finalResult;
 	} catch (error) {
 		log('Error matching trigger:', error);
 		return false;

@@ -44,6 +44,8 @@ export function shouldEvaluateInstantTrigger(
 	const typedFromCursor = getGraphemeBeforeIndex(context.afterText, context.cursorCharIndex);
 	const typedCharCandidate = typedFromKey ?? typedFromInserted ?? typedFromCursor;
 
+	logger(`Evaluating instant trigger ${snippet.trigger}: expected='${expectedChar}', typedFromKey='${typedFromKey}', typedFromInserted='${typedFromInserted}', typedFromCursor='${typedFromCursor}', candidate='${typedCharCandidate}'`);
+
 	if (!typedCharCandidate) {
 		logger(
 			`Unable to resolve typed character for ${snippet.trigger}; key='${context.triggerKey}', inserted='${context.insertedText}', cursorIndex=${context.cursorCharIndex}`
