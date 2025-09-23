@@ -194,20 +194,22 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 		// Create a synthetic trigger context for the key that was pressed
 		const triggerKey = event.key;
 
-		// Use setTimeout to let the key insertion happen first, then check for triggers
-		setTimeout(() => {
+		// Use multiple setTimeout attempts to handle asynchronous text insertion on iOS
+		const checkInsertedText = (attemptsLeft: number) => {
 			const afterText = editor.getValue();
 			const afterCursor = editor.getCursor();
 			const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
 			const inserted = options.extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
 
-			// Verify the key was actually inserted
-			const expectedCharIndex = beforeCharIndex + triggerKey.length;
-			if (cursorCharIndex === expectedCharIndex) {
+			// Check if the key was inserted (cursor moved by at least the key length)
+			const cursorMoved = cursorCharIndex > beforeCharIndex;
+			const textChanged = inserted.length > 0;
+
+			if ((cursorMoved && textChanged) || attemptsLeft <= 0) {
 				const context: TriggerContext = {
 					triggerKey,
 					originalKey: triggerKey,
-					insertedText: inserted,
+					insertedText: inserted || triggerKey,
 					beforeText,
 					beforeCursor,
 					afterText,
@@ -221,12 +223,21 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 					normalizedKey: triggerKey,
 					insertedText: inserted,
 					metadata: {
-						cursorCharIndex
+						cursorCharIndex,
+						attemptsLeft,
+						cursorMoved,
+						textChanged
 					}
 				});
 				options.onContext(context);
+				return;
 			}
-		}, 0);
+
+			// Try again with a longer delay
+			setTimeout(() => checkInsertedText(attemptsLeft - 1), 10);
+		};
+
+		setTimeout(() => checkInsertedText(5), 0); // Try up to 5 times with 10ms delays
 	};
 
 	const handlers: {
