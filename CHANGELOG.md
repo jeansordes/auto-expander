@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* use separate tag patterns for better GitHub Actions compatibility ([6096dfe](https://github.com/jeansordes/auto-expander/commit/6096dfe6aa2b08fb16a1cf26fafef181c2c08eae))
+
+#  (2025-09-23)
+
+### Bug Fixes
+
 * refine context handling in instant input logic ([eff3a35](https://github.com/jeansordes/auto-expander/commit/eff3a35e061683e0d740f7dc8f888fe0605925f3))
 * remove branch trigger from release workflow to prevent conflicts ([85e6d40](https://github.com/jeansordes/auto-expander/commit/85e6d40a77f251209f4e72036da343043f5c8956))
 
