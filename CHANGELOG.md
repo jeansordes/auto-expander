@@ -1,5 +1,11 @@
 #  (2025-09-23)
 
+### Features
+
+* add debug logging for keyboard/input events ([129264f](https://github.com/jeansordes/auto-expander/commit/129264faf748212b54da121e20a921f79f67ea8c))
+
+#  (2025-09-23)
+
 #  (2025-09-23)
 
 ### Bug Fixes
