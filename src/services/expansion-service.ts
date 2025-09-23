@@ -144,58 +144,53 @@ export class ExpansionService {
 				const cursorCharIndex = getCursorCharIndex(afterText, afterCursor);
 				const insertedText = extractInsertedText(afterText, beforeCharIndex, cursorCharIndex);
 				const fallbackFromCursor = getGraphemeBeforeIndex(afterText, cursorCharIndex);
-                                const normalizedKey = normalizeTriggerKey(event.key, insertedText, fallbackFromCursor);
-                                const anticipatedAction = this.getTriggerActionFromKey(normalizedKey);
-                                const shouldDeferToInput = anticipatedAction === 'instant' && !insertedText && event.key.length === 1;
+				const normalizedKey = normalizeTriggerKey(event.key, insertedText, fallbackFromCursor);
+				const anticipatedAction = this.getTriggerActionFromKey(normalizedKey);
+				const shouldDeferToInput = anticipatedAction === 'instant' && !insertedText && event.key.length === 1;
 
-                                if (anticipatedAction === 'instant') {
-                                        if (shouldDeferToInput) {
-                                                this.lastKeyboardInstantTimestamp = null;
-                                        } else {
-                                                this.lastKeyboardInstantTimestamp = performance.now();
-                                        }
-                                } else if (anticipatedAction) {
-                                        this.lastKeyboardInstantTimestamp = null;
-                                }
-                                if (normalizedKey !== event.key) {
-                                        log(`Normalized key '${event.key}' to '${normalizedKey}' for instant trigger handling`);
-                                }
+				if (anticipatedAction === 'instant' && !shouldDeferToInput) {
+					this.lastKeyboardInstantTimestamp = performance.now();
+				} else if (anticipatedAction) {
+					this.lastKeyboardInstantTimestamp = null;
+				}
+				if (normalizedKey !== event.key) {
+					log(`Normalized key '${event.key}' to '${normalizedKey}' for instant trigger handling`);
+				}
 
-                                this.notifyDebug({
-                                        source: 'keydown',
-                                        eventKey: event.key,
-                                        normalizedKey,
-                                        insertedText,
-                                        metadata: {
-                                                anticipatedAction,
-                                                beforeCharIndex,
-                                                cursorCharIndex,
-                                                unreliable: isUnreliableInstantKey(event.key),
-                                                deferredToInput: shouldDeferToInput
-                                        }
-                                });
+				this.notifyDebug({
+					source: 'keydown',
+					eventKey: event.key,
+					normalizedKey,
+					insertedText,
+					metadata: {
+						anticipatedAction,
+						beforeCharIndex,
+						cursorCharIndex,
+						unreliable: isUnreliableInstantKey(event.key),
+						deferredToInput: shouldDeferToInput
+					}
+				});
 
-                                if (shouldDeferToInput) {
-                                        log(`Deferring instant trigger handling to input event for key '${event.key}' (no inserted text yet)`);
-                                        return;
-                                }
+				if (shouldDeferToInput) {
+					return;
+				}
 
-                                const context: TriggerContext = {
-                                        triggerKey: normalizedKey,
-                                        originalKey: event.key,
-                                        insertedText,
-                                        beforeText,
-                                        beforeCursor,
-                                        afterText,
-                                        afterCursor,
-                                        cursorCharIndex,
-                                        deletedChar: null
-                                };
+				const context: TriggerContext = {
+					triggerKey: normalizedKey,
+					originalKey: event.key,
+					insertedText,
+					beforeText,
+					beforeCursor,
+					afterText,
+					afterCursor,
+					cursorCharIndex,
+					deletedChar: null
+				};
 
-                                callback(context);
-                        }, 0);
-                };
-        }
+				callback(context);
+			}, 0);
+		};
+	}
 
 
 	private isInteractionAllowed(
