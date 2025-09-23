@@ -1,3 +1,9 @@
+#  (2025-09-23)
+
+### Bug Fixes
+
+* improve iOS input handling in instant input service ([bee4adb](https://github.com/jeansordes/auto-expander/commit/bee4adb6c56b76c20feed8422f88782767df5734))
+
 #  (2025-09-20)
 
 ### Bug Fixes
