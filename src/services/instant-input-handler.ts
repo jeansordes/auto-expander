@@ -186,19 +186,8 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 
 		// Create a synthetic trigger context for the key that was pressed
 		const triggerKey = event.key;
-		const context: TriggerContext = {
-			triggerKey,
-			originalKey: triggerKey,
-			insertedText: triggerKey,
-			beforeText,
-			beforeCursor,
-			afterText: beforeText, // Will be updated after the key is actually inserted
-			afterCursor: beforeCursor, // Will be updated after the key is actually inserted
-			cursorCharIndex: beforeCharIndex,
-			deletedChar: null
-		};
 
-		// Use setTimeout to let the key insertion happen first
+		// Use setTimeout to let the key insertion happen first, then check for triggers
 		setTimeout(() => {
 			const afterText = editor.getValue();
 			const afterCursor = editor.getCursor();
@@ -208,11 +197,16 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 			// Verify the key was actually inserted
 			const expectedCharIndex = beforeCharIndex + triggerKey.length;
 			if (cursorCharIndex === expectedCharIndex) {
-				const updatedContext: TriggerContext = {
-					...context,
+				const context: TriggerContext = {
+					triggerKey,
+					originalKey: triggerKey,
+					insertedText: inserted,
+					beforeText,
+					beforeCursor,
 					afterText,
 					afterCursor,
-					cursorCharIndex
+					cursorCharIndex,
+					deletedChar: null
 				};
 				debug?.({
 					source: 'ios-keydown',
@@ -223,7 +217,7 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 						cursorCharIndex
 					}
 				});
-				options.onContext(updatedContext);
+				options.onContext(context);
 			}
 		}, 0);
 	};
