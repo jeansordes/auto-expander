@@ -44,8 +44,6 @@ export interface AutoExpanderSettings {
   wrapText: boolean;
   /** Delay in milliseconds between executing commands after snippet expansion */
   commandDelay: number;
-  /** Whether to show debug notices for keyboard/input events */
-  mobileDebugNotices: boolean;
 }
 
 /** Default settings for the plugin */
@@ -53,5 +51,4 @@ export const DEFAULT_SETTINGS: AutoExpanderSettings = {
   snippetsJsonc: '',
   wrapText: false,
   commandDelay: 100,
-  mobileDebugNotices: false,
 };

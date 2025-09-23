@@ -34,7 +34,7 @@ type CompiledTrigger = ReturnType<typeof compileTrigger>;
 export type { TriggerContext } from './trigger-context';
 
 export interface DebugEventPayload {
-	source: 'keydown' | 'beforeinput' | 'input' | 'ios-keydown' | 'expansion-service';
+	source: 'keydown' | 'beforeinput' | 'input' | 'ios-keydown';
 	eventKey?: string;
 	normalizedKey?: string;
 	insertedText?: string;
@@ -47,19 +47,6 @@ export class ExpansionService {
 	private readonly app: App;
 	private readonly snippetExecutor: SnippetExecutor;
 	private lastKeyboardInstantTimestamp: number | null = null;
-	private debugNotifier?: (payload: DebugEventPayload) => void;
-
-	// Helper method to log both to createDebug and debugNotifier
-	private debugLog(message: string): void {
-		log(message);
-		if (this.debugNotifier) {
-			this.debugNotifier({
-				source: 'expansion-service',
-				eventKey: 'debug',
-				metadata: { message }
-			});
-		}
-	}
 
 	constructor(app: App) {
 		this.app = app;
@@ -74,10 +61,8 @@ export class ExpansionService {
 		snippetsValid: boolean,
 		lastValidationError: string | null,
 		onTriggerKeyPressed: (context: TriggerContext) => void,
-		shouldPreventKey?: (key: string, text: string, cursorIndex: number) => boolean,
-		debugNotifier?: (payload: DebugEventPayload) => void
+		shouldPreventKey?: (key: string, text: string, cursorIndex: number) => boolean
 	): () => void {
-		this.debugNotifier = debugNotifier;
 		const keyboardHandler = this.createKeyboardHandler(
 			snippetsValid,
 			lastValidationError,
@@ -93,8 +78,7 @@ export class ExpansionService {
 			onContext: onTriggerKeyPressed,
 			extractInsertedText: (afterText: string, beforeIndex: number, afterIndex: number) =>
 				extractInsertedText(afterText, beforeIndex, afterIndex),
-			shouldSuppressInstantInput: () => this.shouldSuppressInstantInput(),
-			debugNotifier: (payload) => this.notifyDebug(payload)
+			shouldSuppressInstantInput: () => this.shouldSuppressInstantInput()
 		});
 
 		document.addEventListener('keydown', keyboardHandler, true);
@@ -168,20 +152,6 @@ export class ExpansionService {
 				if (normalizedKey !== event.key) {
 					log(`Normalized key '${event.key}' to '${normalizedKey}' for instant trigger handling`);
 				}
-
-				this.notifyDebug({
-					source: 'keydown',
-					eventKey: event.key,
-					normalizedKey,
-					insertedText,
-					metadata: {
-						anticipatedAction,
-						beforeCharIndex,
-						cursorCharIndex,
-						unreliable: isUnreliableInstantKey(event.key),
-						deferredToInput: shouldDeferToInput
-					}
-				});
 
 				if (shouldDeferToInput) {
 					return;
@@ -290,10 +260,6 @@ export class ExpansionService {
 		return elapsed < INSTANT_INPUT_SUPPRESSION_MS;
 	}
 
-	private notifyDebug(payload: DebugEventPayload): void {
-		this.debugNotifier?.(payload);
-	}
-
 	checkForSnippetTrigger(
 		context: TriggerContext,
 		triggerAction: string,
@@ -302,10 +268,7 @@ export class ExpansionService {
 		onSnippetMatch: (editor: Editor, snippet: ParsedSnippet, compiledTrigger: CompiledTrigger, ctx: TriggerContext, action: string) => void
 	): void {
 		try {
-			this.debugLog(`Checking triggers: action=${triggerAction}, cursor=${context.afterCursor.ch} (charIndex=${context.cursorCharIndex}), key=${context.triggerKey}, afterText length=${context.afterText.length}`);
-			this.debugLog(`After text: "${context.afterText.substring(Math.max(0, context.cursorCharIndex - 10), context.cursorCharIndex + 10)}"`);
 			const snippets = collectRelevantSnippets(triggerAction, snippetMap);
-			this.debugLog(`Found ${snippets.length} snippets for action '${triggerAction}': ${snippets.map(s => s.trigger).join(', ')}`);
 			for (const snippet of snippets) {
 				if (!snippet.isValid) {
 					continue;
@@ -323,27 +286,20 @@ export class ExpansionService {
 				const textToCheck = triggerAction === 'instant' ? context.afterText : context.beforeText;
 				const cursorIndex = context.cursorCharIndex;
 
-				logTriggerContext((msg) => this.debugLog(msg), snippet.trigger, textToCheck, cursorIndex);
-
 				if (!matchesTrigger(compiledTrigger, textToCheck, cursorIndex, triggerAction)) {
-					this.debugLog(`Trigger "${snippet.trigger}" did not match at cursor position ${cursorIndex}`);
 					continue;
 				}
 
-				this.debugLog(`Trigger "${snippet.trigger}" MATCHED! Executing snippet...`);
-
 				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				if (!activeView?.editor) {
-					this.debugLog(`No active markdown view found, cannot execute snippet`);
 					return;
 				}
 
 				onSnippetMatch(activeView.editor, snippet, compiledTrigger, context, triggerAction);
-				this.debugLog(`Snippet execution initiated for "${snippet.trigger}"`);
 				break;
 			}
 		} catch (error) {
-			this.debugLog(`Error checking for snippet trigger: ${error}`);
+			log('Error checking for snippet trigger:', error);
 		}
 	}
 

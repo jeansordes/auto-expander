@@ -121,13 +121,6 @@ export default [
 			"@typescript-eslint/no-explicit-any": "error",
 		},
 	},
-	// Expansion service: allow more lines due to complex event handling logic
-	{
-		files: ["src/services/expansion-service.ts"],
-		rules: {
-			"max-lines": "off",
-		},
-	},
 	// View/DOM-heavy code: soften innerHTML/style restrictions to allow performant rendering
 	{
 		files: [

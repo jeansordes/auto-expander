@@ -273,15 +273,6 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl)
-			.setName('Show keyboard debug notices')
-			.setDesc('Display a notice for each keyboard/input event. Useful for diagnosing mobile issues (may be noisy).')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.mobileDebugNotices)
-				.onChange(async (value) => {
-					await this.plugin.updateSettings({ mobileDebugNotices: value });
-				}));
-
 		const logSetting = new Setting(containerEl)
 			.setName('Debug log')
 			.setDesc('Captured debug output for this session. Share these details when reporting issues.');

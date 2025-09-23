@@ -192,8 +192,6 @@ export function matchesTrigger(
 	const startTime = Date.now();
 
 	try {
-		log(`Matching trigger (pattern: /${regex.source}/${regex.flags}) against text: "${input}" (cursor at ${cursorPos}, eventType: ${eventType})`);
-
 		regex.lastIndex = 0;
 
 		while ((match = regex.exec(input)) !== null) {
@@ -273,15 +271,7 @@ export function matchesTrigger(
 		}
 
 		const optionsAllowed = eventTypeAllowed(eventType, compiledTrigger.options);
-		if (explicitRegexMatched) {
-			log(`Explicit regex trigger matched, event type check: ${eventType}, allowed=${optionsAllowed}`);
-		} else {
-			log(`Event type check: eventType=${eventType}, options=${compiledTrigger.options.join(',')}, allowed=${optionsAllowed}`);
-		}
-
-		const finalResult = optionsAllowed;
-		log(`Trigger match result: ${finalResult}`);
-		return finalResult;
+		return optionsAllowed;
 	} catch (error) {
 		log('Error matching trigger:', error);
 		return false;

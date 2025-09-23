@@ -44,20 +44,13 @@ export function shouldEvaluateInstantTrigger(
 	const typedFromCursor = getGraphemeBeforeIndex(context.afterText, context.cursorCharIndex);
 	const typedCharCandidate = typedFromKey ?? typedFromInserted ?? typedFromCursor;
 
-	logger(`Evaluating instant trigger ${snippet.trigger}: expected='${expectedChar}', typedFromKey='${typedFromKey}', typedFromInserted='${typedFromInserted}', typedFromCursor='${typedFromCursor}', candidate='${typedCharCandidate}'`);
-
 	if (!typedCharCandidate) {
-		logger(
-			`Unable to resolve typed character for ${snippet.trigger}; key='${context.triggerKey}', inserted='${context.insertedText}', cursorIndex=${context.cursorCharIndex}`
-		);
 		return true;
 	}
 
 	const matchesLastChar = typedCharCandidate === expectedChar;
 	if (!matchesLastChar) {
-		logger(
-			`Skipping instant trigger ${snippet.trigger}: typed '${typedCharCandidate}' but expected '${expectedChar}' (key='${context.triggerKey}', inserted='${context.insertedText}', cursorIndex=${context.cursorCharIndex})`
-		);
+		return false;
 	}
 	return matchesLastChar;
 }

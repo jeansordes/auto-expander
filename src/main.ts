@@ -6,7 +6,7 @@ import { AutoExpanderSettings, ParsedSnippet } from './types';
 import { AutoExpanderSettingTab } from './ui/settings';
 import { SettingsService } from './services/settings-service';
 import { SnippetService } from './services/snippet-service';
-import { ExpansionService, TriggerContext, type DebugEventPayload } from './services/expansion-service';
+import { ExpansionService, TriggerContext } from './services/expansion-service';
 import { matchesTrigger } from './core';
 
 const log = createDebug(pluginInfos.id + ':main');
@@ -19,8 +19,6 @@ export default class AutoExpander extends Plugin {
 	private snippetService: SnippetService;
 	private expansionService: ExpansionService;
 	private readonly logService = logService;
-	private lastDebugNoticeAt = 0;
-	private static readonly DEBUG_NOTICE_INTERVAL_MS = 500;
 
 	// Event listener cleanup function
 	private unregisterExpansionListener?: () => void;
@@ -136,8 +134,7 @@ export default class AutoExpander extends Plugin {
 					default: return false;
 				}
 				return this.wouldTriggerSnippet(text, cursorIndex, actionType);
-			},
-			(payload) => this.handleExpansionDebugEvent(payload)
+			}
 		);
 	}
 
@@ -235,32 +232,6 @@ export default class AutoExpander extends Plugin {
 		}
 	}
 
-	private readonly handleExpansionDebugEvent = (payload: DebugEventPayload): void => {
-		const parts: string[] = [`source=${payload.source}`];
-		if (payload.eventKey) parts.push(`key=${payload.eventKey}`);
-		if (payload.normalizedKey) parts.push(`normalized=${payload.normalizedKey}`);
-		if (payload.inputType) parts.push(`inputType=${payload.inputType}`);
-		if (payload.insertedText !== undefined) {
-			parts.push(`inserted=${JSON.stringify(payload.insertedText)}`);
-		}
-		if (payload.data !== undefined) {
-			parts.push(`data=${JSON.stringify(payload.data)}`);
-		}
-		if (payload.metadata && Object.keys(payload.metadata).length > 0) {
-			parts.push(`meta=${JSON.stringify(payload.metadata)}`);
-		}
-		const message = parts.join(' | ');
-		this.logService.recordManual(`${pluginInfos.id}:debug`, message);
-
-		if (this.settings.mobileDebugNotices) {
-			const now = Date.now();
-			if (now - this.lastDebugNoticeAt >= AutoExpander.DEBUG_NOTICE_INTERVAL_MS) {
-				new Notice(`Auto Expander debug: ${message}`, 5000);
-				this.lastDebugNoticeAt = now;
-			}
-		}
-	};
-
 	getDebugLog(): string {
 		return this.logService.getLogString();
 	}
@@ -283,11 +254,6 @@ export default class AutoExpander extends Plugin {
 		// Update delays if changed
 		if ('commandDelay' in newSettings) {
 			this.expansionService.updateCommandDelay(this.settings.commandDelay);
-		}
-
-		if ('mobileDebugNotices' in newSettings) {
-			this.lastDebugNoticeAt = 0;
-			this.logService.recordManual(`${pluginInfos.id}:settings`, `mobileDebugNotices=${this.settings.mobileDebugNotices}`);
 		}
 
 		// Reload snippets if they might have changed

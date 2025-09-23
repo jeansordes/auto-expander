@@ -51,7 +51,7 @@ export class SnippetExecutor {
 		this.executing = true;
 
 		try {
-			log(`Executing snippet: ${snippet.id} - "${snippet.trigger}" -> "${JSON.stringify(snippet.replacement)}"`);
+			log(`Executing snippet: ${snippet.id}`);
 
 			const match = this.findSnippetMatch(compiledTrigger, context, triggerAction);
 			if (!match) {
