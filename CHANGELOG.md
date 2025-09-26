@@ -1,5 +1,7 @@
 #  (2025-09-26)
 
+#  (2025-09-26)
+
 ### Features
 
 * add external config file support for snippets ([717e182](https://github.com/jeansordes/auto-expander/commit/717e18219b4583f8dea11e6b1ba37ac2e4657d6e))

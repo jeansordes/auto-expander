@@ -1,7 +1,7 @@
 {
 	"name": "Auto Expander",
 	"type": "module",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Auto expand text as you type with mobile support",
 	"main": "main.js",
 	"scripts": {
