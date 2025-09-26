@@ -13,7 +13,7 @@ describe('matchesTrigger cursor evaluation', () => {
 	});
 
 	it('keeps flexible cursor positioning for regex triggers with leading markers', () => {
-		const compiled = compileTrigger('${0:instant}(abc)', true);
+		const compiled = compileTrigger('/${0:instant}(abc)/');
 		const text = 'xxabcxx';
 		const matchStart = text.indexOf('abc');
 		const cursorInside = matchStart + 1; // Inside the matched text

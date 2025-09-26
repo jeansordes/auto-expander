@@ -149,11 +149,11 @@ export class SnippetService {
 	/**
 	 * Get compiled trigger for a snippet
 	 */
-	getCompiledTrigger(trigger: string, isRegex: boolean = false): ReturnType<typeof compileTrigger> | undefined {
-		const cacheKey = `${isRegex ? 'regex:' : 'literal:'}${trigger}`;
+	getCompiledTrigger(trigger: string): ReturnType<typeof compileTrigger> | undefined {
+		const cacheKey = `trigger:${trigger}`;
 		let compiledTrigger = this.compiledTriggers.get(cacheKey);
 		if (!compiledTrigger) {
-			compiledTrigger = compileTrigger(trigger, isRegex);
+			compiledTrigger = compileTrigger(trigger);
 			this.compiledTriggers.set(cacheKey, compiledTrigger);
 		}
 		return compiledTrigger;

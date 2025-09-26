@@ -4,8 +4,8 @@ import { RegexMatcher } from '../../src/services/regex-matcher';
 describe('RegexMatcher locateCurrentMatch', () => {
 	it('returns the occurrence containing the cursor when identical matches exist', () => {
 		const matcher = new RegexMatcher();
-		const trigger = '${0:newline}(.)\\n((#+) .*[0-9]{4}-[0-9]{2}-[0-9]{2}.*)';
-		const compiled = compileTrigger(trigger, true);
+		const trigger = '/${0:newline}(.)\\n((#+) .*[0-9]{4}-[0-9]{2}-[0-9]{2}.*)/';
+		const compiled = compileTrigger(trigger);
 
 		const text = [
 			'## Comments',

@@ -8,8 +8,6 @@ export interface Snippet {
   replacement?: string | string[];
   /** Optional command IDs to execute after expansion */
   commands?: string | string[];
-  /** Whether the trigger should be treated as a regex pattern (no escaping) */
-  regex?: boolean;
 }
 
 /**
@@ -26,7 +24,7 @@ export interface ParsedSnippet {
   commands: string[];
   /** Parsed cursor marker options (e.g., ['space', 'tab', 'instant']) */
   cursorMarkerOptions: string[];
-  /** Whether the trigger should be treated as a regex pattern (no escaping) */
+  /** Whether the trigger should be treated as a regex pattern (computed from /.../ syntax) */
   regex: boolean;
   /** Whether this snippet is valid and can be used */
   isValid: boolean;

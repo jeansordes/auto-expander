@@ -193,7 +193,7 @@ export default class AutoExpander extends Plugin {
 				context,
 				triggerAction,
 				this.snippetService.getSnippetMap(),
-				(trigger, isRegex) => this.snippetService.getCompiledTrigger(trigger, isRegex),
+				(trigger) => this.snippetService.getCompiledTrigger(trigger),
 				(editor, snippet, compiledTrigger, ctx, triggerAction) =>
 					this.expansionService.executeSnippet(editor, snippet, compiledTrigger, ctx, triggerAction)
 			);
@@ -231,7 +231,7 @@ export default class AutoExpander extends Plugin {
 				if (!snippet.isValid) continue;
 
 				// Get or compile the trigger regex
-				const compiledTrigger = this.snippetService.getCompiledTrigger(snippet.trigger, snippet.regex);
+				const compiledTrigger = this.snippetService.getCompiledTrigger(snippet.trigger);
 				if (!compiledTrigger) continue;
 
 				// Check if this snippet matches at the current cursor position

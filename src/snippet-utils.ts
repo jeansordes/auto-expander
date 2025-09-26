@@ -7,6 +7,14 @@ const snippetLog = createDebug(`${pluginInfos.id}:snippets`);
 
 const VALID_TRIGGER_OPTIONS = ['instant', 'space', 'tab', 'enter', 'newline', 'backspace'];
 
+/**
+ * Determines if a trigger string should be treated as a regex pattern
+ * based on whether it starts and ends with forward slashes
+ */
+function isRegexTrigger(trigger: string): boolean {
+	return trigger.startsWith('/') && trigger.endsWith('/') && trigger.length > 2;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
 }
@@ -48,7 +56,7 @@ export function parseJsoncSnippets(jsoncString: string): { snippets: Snippet[]; 
 			if (!isRecord(candidate)) {
 				return { snippets: [], error: `Snippet ${i}: must be an object` };
 			}
-			const { trigger, replacement, commands, regex } = candidate;
+			const { trigger, replacement, commands } = candidate;
 			if (typeof trigger !== 'string' || trigger.trim().length === 0) {
 				return { snippets: [], error: `Snippet ${i}: trigger field is required and must be a string` };
 			}
@@ -65,10 +73,6 @@ export function parseJsoncSnippets(jsoncString: string): { snippets: Snippet[]; 
 				}
 			}
 
-			if (regex !== undefined && typeof regex !== 'boolean') {
-				return { snippets: [], error: `Snippet ${i}: regex must be a boolean` };
-			}
-
 			const snippet: Snippet = { trigger };
 			if (typeof replacement === 'string') {
 				snippet.replacement = replacement;
@@ -79,9 +83,6 @@ export function parseJsoncSnippets(jsoncString: string): { snippets: Snippet[]; 
 				snippet.commands = commands;
 			} else if (commands !== undefined && isStringArray(commands)) {
 				snippet.commands = commands;
-			}
-			if (typeof regex === 'boolean') {
-				snippet.regex = regex;
 			}
 
 			snippets.push(snippet);
@@ -112,7 +113,7 @@ export function validateAndParseSnippets(snippets: Snippet[]): ParsedSnippet[] {
 					replacement: [],
 					commands: [],
 					cursorMarkerOptions: [],
-					regex: snippet.regex === true,
+					regex: isRegexTrigger(snippet.trigger),
 					isValid: false,
 					error: 'Duplicate trigger'
 				});
@@ -135,7 +136,7 @@ export function validateAndParseSnippets(snippets: Snippet[]): ParsedSnippet[] {
 					commands = snippet.commands.filter((entry): entry is string => typeof entry === 'string');
 				}
 			}
-			const regex = snippet.regex === true;
+			const regex = isRegexTrigger(snippet.trigger);
 			triggerSet.add(snippet.trigger);
 			parsedSnippets.push({
 				id,
@@ -154,7 +155,7 @@ export function validateAndParseSnippets(snippets: Snippet[]): ParsedSnippet[] {
 				replacement: [],
 				commands: [],
 				cursorMarkerOptions: [],
-				regex: snippet.regex === true,
+				regex: isRegexTrigger(snippet.trigger),
 				isValid: false,
 				error: error instanceof Error ? error.message : 'Unknown error'
 			});

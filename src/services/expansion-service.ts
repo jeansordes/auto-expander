@@ -264,7 +264,7 @@ export class ExpansionService {
 		context: TriggerContext,
 		triggerAction: string,
 		snippetMap: Map<string, ParsedSnippet[]>,
-		getCompiledTrigger: (trigger: string, isRegex: boolean) => CompiledTrigger | undefined,
+		getCompiledTrigger: (trigger: string) => CompiledTrigger | undefined,
 		onSnippetMatch: (editor: Editor, snippet: ParsedSnippet, compiledTrigger: CompiledTrigger, ctx: TriggerContext, action: string) => void
 	): void {
 		try {
@@ -274,7 +274,7 @@ export class ExpansionService {
 					continue;
 				}
 
-				const compiledTrigger = getCompiledTrigger(snippet.trigger, snippet.regex);
+				const compiledTrigger = getCompiledTrigger(snippet.trigger);
 				if (!compiledTrigger) {
 					continue;
 				}

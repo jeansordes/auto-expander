@@ -69,11 +69,10 @@ function processTriggerPattern(source: string, escapeLiterals: boolean): Trigger
 
 /**
  * Compiles a trigger string into regex and options for matching
- * Supports both explicit regex triggers and automatic escaping
+ * Regex triggers are detected by /.../ syntax, literal strings are automatically escaped
  */
 export function compileTrigger(
-	trigger: string,
-	isRegex: boolean = false
+	trigger: string
 ): { regex: RegExp; options: string[]; hasCursorMarker: boolean; isExplicitRegex: boolean; allowsFlexibleCursor: boolean } {
 	const isExplicitRegex = trigger.startsWith('/') && trigger.endsWith('/') && trigger.length > 2;
 
@@ -82,52 +81,38 @@ export function compileTrigger(
 	let hasCursorMarker = false;
 	let allowsFlexibleCursor = false;
 
-		if (isExplicitRegex || isRegex) {
-			// Don't escape regex patterns (either explicit /.../ or marked as regex: true)
-			let patternToProcess = trigger;
-			if (isExplicitRegex) {
-				patternToProcess = trigger.slice(1, -1);
-			}
+	if (isExplicitRegex) {
+		// Explicit regex trigger: use the pattern inside the slashes without escaping
+		const patternToProcess = trigger.slice(1, -1);
 
-			// For regex triggers, modify the pattern to support cursor anywhere within the match
-			if (isRegex && !isExplicitRegex) {
-				// Check if cursor marker is at the beginning
-				CURSOR_MARKER_REGEX.lastIndex = 0;
-				const cursorMatch = CURSOR_MARKER_REGEX.exec(patternToProcess);
+		// Check if cursor marker is at the beginning for flexible cursor positioning
+		CURSOR_MARKER_REGEX.lastIndex = 0;
+		const cursorMatch = CURSOR_MARKER_REGEX.exec(patternToProcess);
 
-				if (cursorMatch && cursorMatch.index === 0) {
-					// Cursor marker is at the beginning - for flexible cursor positioning,
-					// remove the cursor marker and allow matching anywhere in the pattern
-					const markerOptions = cursorMatch[1] ? parseCursorMarkerOptions(cursorMatch[0]) : ['instant'];
-					options = markerOptions.length > 0 ? markerOptions : ['instant'];
-					hasCursorMarker = true;
-					allowsFlexibleCursor = true;
+		if (cursorMatch && cursorMatch.index === 0) {
+			// Cursor marker is at the beginning - for flexible cursor positioning,
+			// remove the cursor marker and allow matching anywhere in the pattern
+			const markerOptions = cursorMatch[1] ? parseCursorMarkerOptions(cursorMatch[0]) : ['instant'];
+			options = markerOptions.length > 0 ? markerOptions : ['instant'];
+			hasCursorMarker = true;
+			allowsFlexibleCursor = true;
 
-					// Remove cursor marker and keep the user's pattern
-					const userPattern = patternToProcess.slice(cursorMatch[0].length);
-					processedTrigger = userPattern;
+			// Remove cursor marker and keep the user's pattern
+			processedTrigger = patternToProcess.slice(cursorMatch[0].length);
 
-					log(`Processing regex trigger with flexible cursor positioning: ${processedTrigger}`);
-				} else {
-					// Cursor marker is elsewhere or not present - use standard processing
-					const result = processTriggerPattern(patternToProcess, false);
-					processedTrigger = result.pattern;
-					options = result.foundCursorMarker ? result.options : ['instant'];
-					hasCursorMarker = result.foundCursorMarker;
-					log(`Processing regex trigger with standard processing: ${processedTrigger}`);
-				}
-        } else {
-            // Use the original processing for explicit regex or fallback
-            const result = processTriggerPattern(patternToProcess, false);
-            processedTrigger = result.pattern;
-            options = result.foundCursorMarker ? result.options : [];
-            hasCursorMarker = result.foundCursorMarker;
-            log(`Processing ${isExplicitRegex ? 'explicit' : 'fallback'} trigger: ${processedTrigger}`);
-        }
+			log(`Processing explicit regex trigger with flexible cursor positioning: ${processedTrigger}`);
+		} else {
+			// Cursor marker is elsewhere or not present - use standard processing
+			const result = processTriggerPattern(patternToProcess, false);
+			processedTrigger = result.pattern;
+			options = result.foundCursorMarker ? result.options : ['instant'];
+			hasCursorMarker = result.foundCursorMarker;
+			log(`Processing explicit regex trigger with standard processing: ${processedTrigger}`);
+		}
 
-        if (!hasCursorMarker && !/(?<CURSOR>)/.test(processedTrigger)) {
-            log(`${isExplicitRegex ? 'Explicit' : 'Regex'} trigger without cursor marker detected; matching relies on user-provided pattern`);
-        }
+		if (!hasCursorMarker && !/(?<CURSOR>)/.test(processedTrigger)) {
+			log(`Explicit regex trigger without cursor marker detected; matching relies on user-provided pattern`);
+		}
     } else {
         // Escape literal patterns
         const result = processTriggerPattern(trigger, true);
