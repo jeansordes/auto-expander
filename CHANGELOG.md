@@ -1,5 +1,18 @@
 #  (2025-09-26)
 
+### Features
+
+* **snippets:** simplify regex detection by using /.../ syntax only ([48fb8f3](https://github.com/jeansordes/auto-expander/commit/48fb8f327531c49f434a4b954b0d858509b058aa))
+
+### BREAKING CHANGES
+
+* **snippets:** The `regex` field in snippet configuration is no longer supported.
+Regex patterns must now use the `/.../` syntax. Previous configurations using
+`"regex": true` will no longer work and need to be updated to wrap triggers
+in forward slashes.
+
+#  (2025-09-26)
+
 #  (2025-09-26)
 
 ### Features
