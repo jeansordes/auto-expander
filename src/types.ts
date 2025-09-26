@@ -40,8 +40,6 @@ export interface ParsedSnippet {
 export interface AutoExpanderSettings {
   /** Path to the config file containing snippets */
   configFilePath: string;
-  /** Whether to wrap text in the editor textarea */
-  wrapText: boolean;
   /** Delay in milliseconds between executing commands after snippet expansion */
   commandDelay: number;
 }
@@ -49,6 +47,5 @@ export interface AutoExpanderSettings {
 /** Default settings for the plugin */
 export const DEFAULT_SETTINGS: AutoExpanderSettings = {
   configFilePath: '',
-  wrapText: false,
   commandDelay: 100,
 };

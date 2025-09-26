@@ -62,16 +62,6 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		// Note: Custom workspace events are not supported in Obsidian API
 		// The config file service will handle these events internally
 
-		// Text wrapping toggle
-		new Setting(containerEl)
-			.setName('Wrap text in editor')
-			.setDesc('Enable text wrapping in the snippets editor. When disabled, text will scroll horizontally.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.wrapText)
-				.onChange(async (value) => {
-					await this.plugin.updateSettings({ wrapText: value });
-				}));
-
 		// Command delay setting
 		new Setting(containerEl)
 			.setName('Command Delay')
