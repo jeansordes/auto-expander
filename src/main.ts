@@ -7,6 +7,7 @@ import { AutoExpanderSettingTab } from './ui/settings';
 import { SettingsService } from './services/settings-service';
 import { SnippetService } from './services/snippet-service';
 import { ExpansionService, TriggerContext } from './services/expansion-service';
+import { ConfigFileService } from './services/config-file-service';
 import { matchesTrigger } from './core';
 
 const log = createDebug(pluginInfos.id + ':main');
@@ -18,6 +19,7 @@ export default class AutoExpander extends Plugin {
 	private settingsService: SettingsService;
 	private snippetService: SnippetService;
 	private expansionService: ExpansionService;
+	configFileService: ConfigFileService;
 	private readonly logService = logService;
 
 	// Event listener cleanup function
@@ -38,6 +40,7 @@ export default class AutoExpander extends Plugin {
 		this.settingsService = new SettingsService(this);
 		this.snippetService = new SnippetService();
 		this.expansionService = new ExpansionService(this.app);
+		this.configFileService = new ConfigFileService(this.app);
 	}
 
 	/**
@@ -63,8 +66,11 @@ export default class AutoExpander extends Plugin {
 		// Load settings
 		this.settings = await this.settingsService.loadSettings();
 
-		// Load and validate snippets
-		await this.snippetService.loadSnippets(this.settings);
+		// Initialize config file service with current path
+		this.configFileService.setConfigFilePath(this.settings.configFilePath);
+
+		// Load and validate snippets from config file
+		await this.loadSnippetsFromConfigFile();
 
 		// Set initial delays
 		this.expansionService.updateCommandDelay(this.settings.commandDelay);
@@ -83,6 +89,26 @@ export default class AutoExpander extends Plugin {
 
 		// Register global event listeners
 		this.registerGlobalEvents();
+	}
+
+	/**
+	 * Load snippets from the config file
+	 */
+	private async loadSnippetsFromConfigFile(): Promise<void> {
+		try {
+			const result = await this.configFileService.readConfigFile();
+			if (result.error) {
+				log('Config file parsing error:', result.error);
+			} else {
+				// Parse and validate snippets
+				const parseResult = await this.snippetService.loadSnippetsFromRaw(result.snippets);
+				if (parseResult.error) {
+					log('Snippet validation error:', parseResult.error);
+				}
+			}
+		} catch (error) {
+			log('Error loading snippets from config file:', error);
+		}
 	}
 
 	onunload() {
@@ -230,6 +256,9 @@ export default class AutoExpander extends Plugin {
 			this.unregisterExpansionListener();
 			this.unregisterExpansionListener = undefined;
 		}
+
+		// Clean up config file service
+		this.configFileService.cleanup();
 	}
 
 
@@ -249,19 +278,31 @@ export default class AutoExpander extends Plugin {
 			this.expansionService.updateCommandDelay(this.settings.commandDelay);
 		}
 
-		// Reload snippets if they might have changed
-		if ('snippetsJsonc' in newSettings) {
-			await this.snippetService.loadSnippets(this.settings);
+		// Update config file path if changed
+		if ('configFilePath' in newSettings) {
+			this.configFileService.setConfigFilePath(this.settings.configFilePath);
+			// Reload snippets from new config file
+			await this.loadSnippetsFromConfigFile();
 			// Update expansion mechanism with new settings
 			this.setupExpansionMechanism();
 		}
 	}
 
 	/**
-	 * Update snippet configuration
+	 * Handle config file changes (called by workspace event)
+	 */
+	async handleConfigFileChanged(): Promise<void> {
+		await this.loadSnippetsFromConfigFile();
+		this.setupExpansionMechanism();
+	}
+
+	/**
+	 * Update snippet configuration (legacy method for compatibility)
 	 */
 	async updateSnippets(snippetsJsonc: string): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
-		await this.settingsService.setSetting('snippetsJsonc', snippetsJsonc);
+		// This method is kept for compatibility but should not be used with config files
+		// For config files, use handleConfigFileChanged instead
+		await this.settingsService.setSetting('configFilePath', snippetsJsonc);
 		this.settings = await this.settingsService.loadSettings();
 		const result = await this.snippetService.loadSnippets(this.settings);
 		this.setupExpansionMechanism(); // Update expansion mechanism

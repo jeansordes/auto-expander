@@ -38,8 +38,8 @@ export interface ParsedSnippet {
  * Plugin settings interface
  */
 export interface AutoExpanderSettings {
-  /** User-defined snippets as JSONC string */
-  snippetsJsonc: string;
+  /** Path to the config file containing snippets */
+  configFilePath: string;
   /** Whether to wrap text in the editor textarea */
   wrapText: boolean;
   /** Delay in milliseconds between executing commands after snippet expansion */
@@ -48,7 +48,7 @@ export interface AutoExpanderSettings {
 
 /** Default settings for the plugin */
 export const DEFAULT_SETTINGS: AutoExpanderSettings = {
-  snippetsJsonc: '',
+  configFilePath: '',
   wrapText: false,
   commandDelay: 100,
 };

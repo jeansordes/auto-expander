@@ -121,21 +121,6 @@ export default [
 			"@typescript-eslint/no-explicit-any": "error",
 		},
 	},
-	// View/DOM-heavy code: soften innerHTML/style restrictions to allow performant rendering
-	{
-		files: [
-			"src/virtualTree.ts",
-			"src/views/**/*.ts",
-			"src/utils/measure.ts",
-			"src/settings/**/*.ts",
-		],
-		rules: {
-			"no-restricted-properties": "error",
-			"no-restricted-syntax": "error",
-			"@typescript-eslint/consistent-type-assertions": "off",
-			"@typescript-eslint/ban-ts-comment": "off",
-		},
-	},
 	{
 		files: ["**/*.js", "**/*.mjs"],
 		languageOptions: {

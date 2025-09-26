@@ -7,7 +7,7 @@ import { getCursorCharIndex } from '../utils/editor-position';
 import { getGraphemeBeforeIndex, isSingleGrapheme } from '../utils/grapheme';
 import { SnippetExecutor } from './snippet-executor';
 import type { TriggerContext } from './trigger-context';
-import { collectRelevantSnippets, shouldEvaluateInstantTrigger, logTriggerContext } from './snippet-trigger-helpers';
+import { collectRelevantSnippets, shouldEvaluateInstantTrigger } from './snippet-trigger-helpers';
 import { createInstantInputHandlers } from './instant-input-handler';
 import { extractInsertedText, normalizeTriggerKey, isUnreliableInstantKey } from './trigger-normalization';
 
@@ -279,7 +279,7 @@ export class ExpansionService {
 					continue;
 				}
 
-				if (!shouldEvaluateInstantTrigger(snippet, context, triggerAction, log)) {
+				if (!shouldEvaluateInstantTrigger(snippet, context, triggerAction)) {
 					continue;
 				}
 

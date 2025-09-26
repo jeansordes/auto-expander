@@ -27,7 +27,6 @@ export function shouldEvaluateInstantTrigger(
 	snippet: ParsedSnippet,
 	context: TriggerContext,
 	triggerAction: string,
-	logger: (message: string) => void
 ): boolean {
 	if (triggerAction !== 'instant') {
 		return true;

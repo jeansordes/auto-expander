@@ -187,7 +187,6 @@ export function matchesTrigger(
 	let match: RegExpExecArray | null = null;
 	let matchFound = false;
 	let guardTimedOut = false;
-	let explicitRegexMatched = false;
 	let iterationCount = 0;
 	const startTime = Date.now();
 
@@ -206,7 +205,6 @@ export function matchesTrigger(
 			}
 
 			if (compiledTrigger.isExplicitRegex) {
-				explicitRegexMatched = true;
 				matchFound = true;
 				break;
 			}

@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import pluginInfos from '../../manifest.json';
-import { AutoExpanderSettings, ParsedSnippet } from '../types';
+import { AutoExpanderSettings, ParsedSnippet, Snippet } from '../types';
 import { parseJsoncSnippets, validateAndParseSnippets, createSnippetMap, compileTrigger } from '../core';
 
 const log = createDebug(pluginInfos.id + ':snippet-service');
@@ -17,19 +17,10 @@ export class SnippetService {
 	private lastValidSnippets: string = '';
 
 	/**
-	 * Load and validate snippets from settings
+	 * Load and validate snippets from raw snippet array
 	 */
-	async loadSnippets(settings: AutoExpanderSettings): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
+	async loadSnippetsFromRaw(snippets: Snippet[]): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
 		try {
-			const { snippets, error: parseError } = parseJsoncSnippets(settings.snippetsJsonc);
-
-			if (parseError) {
-				log('JSONC parsing failed:', parseError);
-				this.snippetsValid = false;
-				this.lastValidationError = parseError;
-				return { error: parseError };
-			}
-
 			this.parsedSnippets = validateAndParseSnippets(snippets);
 			this.snippetMap = createSnippetMap(this.parsedSnippets);
 			this.snippetsValid = this.parsedSnippets.every(s => s.isValid);
@@ -41,8 +32,8 @@ export class SnippetService {
 			const invalidSnippets = invalidCount > 0 ? this.parsedSnippets.filter(s => !s.isValid) : undefined;
 
 			if (this.snippetsValid && this.parsedSnippets.length > 0) {
-				// Save this as the last valid configuration
-				this.lastValidSnippets = settings.snippetsJsonc;
+				// Save this as the last valid configuration (serialize back to JSON)
+				this.lastValidSnippets = JSON.stringify(snippets, null, 2);
 				this.lastValidationError = null;
 			} else if (invalidCount > 0) {
 				// Collect validation errors for better error reporting
@@ -50,7 +41,6 @@ export class SnippetService {
 				this.lastValidationError = (errorMessages.length > 0
 					? `Validation errors: ${errorMessages.join('; ')}`
 					: 'Unknown validation error') + ' (expansions are disabled)';
-
 			}
 
 			log(`Loaded ${this.parsedSnippets.length} snippets (${invalidCount} invalid)`);
@@ -64,11 +54,29 @@ export class SnippetService {
 	}
 
 	/**
-	 * Update snippet configuration
+	 * Load and validate snippets from settings (legacy method)
 	 */
-	async updateSnippets(snippetsJsonc: string, settings: AutoExpanderSettings): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
-		settings.snippetsJsonc = snippetsJsonc;
-		return await this.loadSnippets(settings);
+	async loadSnippets(_settings: AutoExpanderSettings): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
+		// Legacy method for backward compatibility - should not be used
+		log('Warning: loadSnippets with settings is deprecated, use loadSnippetsFromRaw instead');
+		return { error: 'This method is deprecated' };
+	}
+
+	/**
+	 * Update snippet configuration (legacy method)
+	 */
+	async updateSnippets(snippetsJsonc: string, _settings: AutoExpanderSettings): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
+		// Legacy method for backward compatibility - should not be used
+		log('Warning: updateSnippets is deprecated, use loadSnippetsFromRaw instead');
+		try {
+			const { snippets, error: parseError } = parseJsoncSnippets(snippetsJsonc);
+			if (parseError) {
+				return { error: parseError };
+			}
+			return await this.loadSnippetsFromRaw(snippets);
+		} catch (error) {
+			return { error: error.message };
+		}
 	}
 
 	/**

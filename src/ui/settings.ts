@@ -1,16 +1,14 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import { indentWithTab } from '@codemirror/commands';
-import { json } from '@codemirror/lang-json';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { EditorState, RangeSetBuilder } from '@codemirror/state';
-import { Decoration, EditorView, ViewPlugin, ViewUpdate, keymap, placeholder as cmPlaceholder } from '@codemirror/view';
-import { tags } from '@lezer/highlight';
+import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import AutoExpander from '../main';
 import { ParsedSnippet } from '../types';
 
 export class AutoExpanderSettingTab extends PluginSettingTab {
 	plugin: AutoExpander;
-	private snippetEditor?: EditorView;
+	private configPathInput?: HTMLInputElement;
+	private statusEl?: HTMLElement;
+	private errorEl?: HTMLElement;
+	private successEl?: HTMLElement;
+	private actionButton?: HTMLElement;
 	private debounceTimer?: number;
 
 	constructor(app: App, plugin: AutoExpander) {
@@ -21,228 +19,48 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 	async display(): Promise<void> {
 		const {containerEl} = this;
 
-		// Only destroy editor if container is being emptied, otherwise preserve state
-		if (containerEl.children.length > 0) {
-			this.snippetEditor?.destroy();
-			this.snippetEditor = undefined;
-		}
-
 		containerEl.empty();
 
 		containerEl.createEl('h2', {text: 'Auto Expander Settings'});
 
-		// Wrapper for full-width textarea
-		const textareaWrapper = containerEl.createEl('div', {cls: 'auto-expander-textarea-wrapper'});
+		// Config file path setting
+		const configSetting = new Setting(containerEl)
+			.setName('Config File Path')
+			.setDesc('Path to the file containing your snippets (supports .md and .json files). The JSON can be in a code block or as plain JSON.');
 
-		const snippetSetting = new Setting(textareaWrapper)
-			.setName('Snippets (JSONC)')
-			.setDesc('Define your text expansion snippets in JSONC format. Supports comments and flexible syntax.');
-			
-		// Status display (right above the editor)
-		const statusEl = snippetSetting.controlEl.createEl('div', {cls: 'auto-expander-status'});
+		// Create input field
+		this.configPathInput = configSetting.controlEl.createEl('input', {
+			type: 'text',
+			placeholder: 'auto-expander-config.md',
+			value: this.plugin.settings.configFilePath,
+			cls: 'auto-expander-config-input'
+		});
 
-		const editorContainer = snippetSetting.controlEl.createDiv({cls: 'auto-expander-editor'});
+		// Create the action button in the same control container
+		this.actionButton = configSetting.controlEl.createEl('button', {
+			cls: 'mod-cta auto-expander-action-button',
+			attr: { 'aria-label': 'Open the config file' }
+		});
+
+		// Status display area
+		this.statusEl = containerEl.createEl('div', {cls: 'dotnav-path-validation'});
 
 		// Error display
-		const errorEl = statusEl.createEl('div', {cls: 'auto-expander-error auto-expander-error-hidden'});
-		const errorContent = errorEl.createEl('div', {cls: 'auto-expander-error-content'});
+		this.errorEl = this.statusEl.createEl('div', {cls: 'auto-expander-error auto-expander-error-hidden'});
 
 		// Success display
-		const successEl = statusEl.createEl('div', {cls: 'auto-expander-success auto-expander-success-hidden'});
-		const successContent = successEl.createEl('div', {cls: 'auto-expander-success-content'});
+		this.successEl = this.statusEl.createEl('div', {cls: 'auto-expander-success auto-expander-success-hidden'});
 
-		const placeholder = '[\n  {\n    "trigger": "hello\\${0:space}",\n    "replacement": "Hello, World!",\n    "commands": ["editor:focus"]\n  }';
-
-		const jsonHighlightStyle = HighlightStyle.define([
-			{ tag: tags.string, color: 'var(--code-string, #a8ff60)' },
-			{ tag: tags.number, color: 'var(--code-number, #ffd866)' },
-			{ tag: tags.bool, color: 'var(--code-boolean, #ff6188)' },
-			{ tag: tags.null, color: 'var(--code-null, #ff6188)' },
-			{ tag: tags.propertyName, color: 'var(--code-property, #78dce8)' },
-			{ tag: tags.brace, color: 'var(--code-punctuation, var(--text-normal))' },
-			{ tag: tags.bracket, color: 'var(--code-punctuation, var(--text-normal))' },
-			{ tag: tags.operator, color: 'var(--code-operator, var(--text-normal))' },
-			{ tag: [tags.comment, tags.lineComment, tags.blockComment], color: 'var(--code-comment, var(--text-muted))', fontStyle: 'italic' },
-		]);
-
-		const renderResult = (result: { error?: string; invalidSnippets?: ParsedSnippet[] }) => {
-			// Clear previous messages
-			errorEl.addClass('auto-expander-error-hidden');
-			errorContent.empty();
-			successEl.addClass('auto-expander-success-hidden');
-			successContent.empty();
-
-			if (result.error) {
-				errorContent.createEl('div', {cls: 'auto-expander-error-title', text: 'JSONC Error (expansions are disabled)'});
-				errorContent.createEl('div', {cls: 'auto-expander-error-message', text: result.error});
-				errorEl.removeClass('auto-expander-error-hidden');
-			} else if (result.invalidSnippets && result.invalidSnippets.length > 0) {
-				errorContent.createEl('div', {cls: 'auto-expander-error-title', text: 'Validation Errors'});
-				const errorList = errorContent.createEl('div', {cls: 'auto-expander-error-list'});
-				result.invalidSnippets.forEach((snippet) => {
-					const originalIndex = this.plugin.getParsedSnippets().indexOf(snippet);
-					errorList.createEl('div', {
-						cls: 'auto-expander-error-item',
-						text: `Snippet ${originalIndex + 1}: ${snippet.error || 'Validation error'}`
-					});
-				});
-				errorEl.removeClass('auto-expander-error-hidden');
-			} else {
-				const snippetCount = this.plugin.getParsedSnippets().length;
-				if (snippetCount > 0) {
-					successContent.createEl('div', {cls: 'auto-expander-success-title', text: 'Success'});
-					successContent.createEl('div', {cls: 'auto-expander-success-message', text: `Successfully loaded ${snippetCount} snippet${snippetCount === 1 ? '' : 's'}`});
-					successEl.removeClass('auto-expander-success-hidden');
-				}
+		// Register input change handler
+		this.configPathInput.addEventListener('input', (e) => {
+			const target = e.target;
+			if (target instanceof HTMLInputElement) {
+				this.schedulePathUpdate(target.value);
 			}
-		};
-
-		const applySnippetUpdate = async (value: string) => {
-			const result = await this.plugin.updateSnippets(value);
-			renderResult(result);
-		};
-
-		const scheduleUpdate = (value: string) => {
-			if (this.debounceTimer !== undefined) {
-				window.clearTimeout(this.debounceTimer);
-			}
-			this.debounceTimer = window.setTimeout(() => {
-				void applySnippetUpdate(value);
-				this.debounceTimer = undefined; // Clear reference after execution
-			}, 300);
-		};
-
-		const commentDecoration = Decoration.mark({ class: 'cm-jsonc-comment' });
-
-		const buildCommentDecorations = (view: EditorView) => {
-			const builder = new RangeSetBuilder<Decoration>();
-			const text = view.state.doc.toString();
-			let pos = 0;
-			let inString = false;
-			let escapeNext = false;
-			let blockStart: number | null = null;
-
-			while (pos < text.length) {
-				const ch = text[pos];
-				const next = text[pos + 1];
-
-				if (blockStart !== null) {
-					if (ch === '*' && next === '/') {
-						builder.add(blockStart, pos + 2, commentDecoration);
-						blockStart = null;
-						pos += 2;
-						continue;
-					}
-					pos += 1;
-					continue;
-				}
-
-				if (inString) {
-					if (escapeNext) {
-						escapeNext = false;
-						pos += 1;
-						continue;
-					}
-					if (ch === '\\') {
-						escapeNext = true;
-						pos += 1;
-						continue;
-					}
-					if (ch === '"') {
-						inString = false;
-					}
-					pos += 1;
-					continue;
-				}
-
-				if (ch === '"') {
-					inString = true;
-					pos += 1;
-					continue;
-				}
-
-				if (ch === '/' && next === '*') {
-					blockStart = pos;
-					pos += 2;
-					continue;
-				}
-
-				if (ch === '/' && next === '/') {
-					const start = pos;
-					pos += 2;
-					while (pos < text.length && text[pos] !== '\n') {
-						pos += 1;
-					}
-					builder.add(start, pos, commentDecoration);
-					continue;
-				}
-
-				pos += 1;
-			}
-
-			if (blockStart !== null) {
-				builder.add(blockStart, text.length, commentDecoration);
-			}
-
-			return builder.finish();
-		};
-
-		const commentHighlightPlugin = ViewPlugin.fromClass(class {
-			decorations;
-
-			constructor(view: EditorView) {
-				this.decorations = buildCommentDecorations(view);
-			}
-
-			update(update: ViewUpdate) {
-				if (update.docChanged) {
-					this.decorations = buildCommentDecorations(update.view);
-				}
-			}
-		}, {
-			decorations: (value) => value.decorations
 		});
 
-		const createEditorState = (wrapText: boolean) => EditorState.create({
-			doc: this.plugin.settings.snippetsJsonc,
-			extensions: [
-				json(),
-				...(wrapText ? [EditorView.lineWrapping] : []),
-				keymap.of([indentWithTab]),
-				cmPlaceholder(placeholder),
-				syntaxHighlighting(jsonHighlightStyle, {fallback: true}),
-				commentHighlightPlugin,
-				EditorView.updateListener.of((update) => {
-					if (update.docChanged) {
-						scheduleUpdate(update.state.doc.toString());
-					}
-				}),
-			]
-		});
-
-		const state = createEditorState(this.plugin.settings.wrapText);
-
-		try {
-			this.snippetEditor = new EditorView({
-				state,
-				parent: editorContainer,
-			});
-		} catch (error) {
-			console.error('Failed to create CodeMirror editor:', error);
-			// Fallback to a simple textarea if CodeMirror fails
-			const textarea = editorContainer.createEl('textarea', {
-				cls: 'auto-expander-fallback-textarea',
-				attr: { placeholder: placeholder }
-			});
-			textarea.value = this.plugin.settings.snippetsJsonc;
-			textarea.addEventListener('input', (e) => {
-				const target = e.target;
-				if (target instanceof HTMLTextAreaElement) {
-					scheduleUpdate(target.value);
-				}
-			});
-			return;
-		}
+		// Note: Custom workspace events are not supported in Obsidian API
+		// The config file service will handle these events internally
 
 		// Text wrapping toggle
 		new Setting(containerEl)
@@ -252,11 +70,6 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.wrapText)
 				.onChange(async (value) => {
 					await this.plugin.updateSettings({ wrapText: value });
-					// Recreate editor with new wrapping setting
-					if (this.snippetEditor) {
-						const newState = createEditorState(value);
-						this.snippetEditor.setState(newState);
-					}
 				}));
 
 		// Command delay setting
@@ -273,23 +86,162 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 					}
 				}));
 
-
-		// Initial status update
-		const initialResult = await this.plugin.updateSnippets(this.plugin.settings.snippetsJsonc);
-		renderResult(initialResult);
+		// Initial validation
+		await this.validateAndUpdateStatus();
 	}
+
+	/**
+	 * Validate config file path and update UI accordingly
+	 */
+	private async validateAndUpdateStatus(): Promise<void> {
+		if (!this.statusEl || !this.errorEl || !this.successEl || !this.actionButton) return;
+
+		// Clear previous messages
+		this.errorEl.addClass('auto-expander-error-hidden');
+		this.errorEl.empty();
+		this.successEl.addClass('auto-expander-success-hidden');
+		this.successEl.empty();
+
+		const path = this.configPathInput?.value.trim() || '';
+
+		if (!path) {
+			// No path specified - show create default option
+			this.showCreateDefaultButton();
+			return;
+		}
+
+		// Check if path is valid
+		const status = this.plugin.configFileService.getConfigFileStatus();
+
+		if (!status.isValid) {
+			// Path is invalid - show error and create default button
+			this.errorEl.empty();
+			this.errorEl.appendChild(this.createValidationMessage('error', 'Config file not found'));
+			this.errorEl.removeClass('auto-expander-error-hidden');
+			this.showCreateDefaultButton();
+			return;
+		}
+
+		// Path is valid - try to read and parse the file
+		try {
+			const result = await this.plugin.configFileService.readConfigFile();
+			await this.displayParseResult(result);
+		} catch {
+			this.errorEl.empty();
+			this.errorEl.appendChild(this.createValidationMessage('error', 'Config file not found'));
+			this.errorEl.removeClass('auto-expander-error-hidden');
+			this.showCreateDefaultButton();
+		}
+	}
+
+	/**
+	 * Display parsing results
+	 */
+	private async displayParseResult(result: { error?: string; invalidSnippets?: ParsedSnippet[] }): Promise<void> {
+		if (!this.errorEl || !this.successEl || !this.actionButton) return;
+
+		if (result.error) {
+			// Parsing error
+			this.errorEl.empty();
+			this.errorEl.appendChild(this.createValidationMessage('error', 'Config file not found'));
+			this.errorEl.removeClass('auto-expander-error-hidden');
+			this.showCreateDefaultButton();
+		} else if (result.invalidSnippets && result.invalidSnippets.length > 0) {
+			// Validation errors
+			this.errorEl.empty();
+			this.errorEl.appendChild(this.createValidationMessage('error', 'Config file not found'));
+			this.errorEl.removeClass('auto-expander-error-hidden');
+			this.showCreateDefaultButton();
+		} else {
+			// Success
+			const snippetCount = this.plugin.getParsedSnippets().length;
+			if (snippetCount > 0) {
+				this.successEl.empty();
+				this.successEl.appendChild(this.createValidationMessage('success', 'Config file found'));
+				this.successEl.removeClass('auto-expander-success-hidden');
+			}
+			this.showOpenFileButton();
+		}
+	}
+
+	/**
+	 * Create a validation message element
+	 */
+	private createValidationMessage(type: 'success' | 'error', message: string): HTMLElement {
+		const messageEl = document.createElement('div');
+		messageEl.className = `dotnav-validation-message dotnav-validation-${type}`;
+
+		const iconSpan = document.createElement('span');
+		iconSpan.className = 'dotnav-validation-icon';
+		iconSpan.textContent = type === 'success' ? '✓' : '✗';
+
+		const textSpan = document.createElement('span');
+		textSpan.textContent = message;
+
+		messageEl.appendChild(iconSpan);
+		messageEl.appendChild(textSpan);
+
+		return messageEl;
+	}
+
+	/**
+	 * Show "Open File" button
+	 */
+	private showOpenFileButton(): void {
+		if (!this.actionButton) return;
+
+		this.actionButton.textContent = 'Open File';
+		this.actionButton.onclick = async () => {
+			await this.plugin.configFileService.openConfigFile();
+		};
+	}
+
+	/**
+	 * Show "Create Default File" button
+	 */
+	private showCreateDefaultButton(): void {
+		if (!this.actionButton) return;
+
+		this.actionButton.textContent = 'Create Default File';
+		this.actionButton.onclick = async () => {
+			const result = await this.plugin.configFileService.createDefaultConfigFile();
+			if (result.success) {
+				new Notice('Default config file created successfully');
+				// Update the input field
+				if (this.configPathInput) {
+					this.configPathInput.value = 'auto-expander-config.md';
+					await this.schedulePathUpdate('auto-expander-config.md');
+				}
+			} else {
+				new Notice(`Failed to create default config file: ${result.error}`);
+			}
+		};
+	}
+
+	/**
+	 * Schedule a debounced path update
+	 */
+	private schedulePathUpdate(path: string): void {
+		if (this.debounceTimer !== undefined) {
+			window.clearTimeout(this.debounceTimer);
+		}
+		this.debounceTimer = window.setTimeout(() => {
+			void this.updateConfigPath(path);
+			this.debounceTimer = undefined;
+		}, 500);
+	}
+
+	/**
+	 * Update the config file path in settings
+	 */
+	private async updateConfigPath(path: string): Promise<void> {
+		await this.plugin.updateSettings({ configFilePath: path });
+		await this.validateAndUpdateStatus();
+	}
+
 
 	// Override hide method for proper cleanup
 	hide(): void {
-		// Clear any pending debounced updates
-		if (this.snippetEditor) {
-			// Ensure any pending updates are processed before hiding
-			const currentDoc = this.snippetEditor.state.doc.toString();
-			if (currentDoc !== this.plugin.settings.snippetsJsonc) {
-				void this.plugin.updateSnippets(currentDoc);
-			}
-		}
-
 		// Clear debounce timer
 		if (this.debounceTimer !== undefined) {
 			window.clearTimeout(this.debounceTimer);
