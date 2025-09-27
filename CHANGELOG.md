@@ -1,3 +1,9 @@
+#  (2025-09-27)
+
+### Bug Fixes
+
+* **text-replacement:** fix cursor positioning when capture groups are used in replacement strings ([f97e379](https://github.com/jeansordes/auto-expander/commit/f97e379afbf9204cb2d8ccd7b2d778b47f5b6f61))
+
 #  (2025-09-26)
 
 ### Features
