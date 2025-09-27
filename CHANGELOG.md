@@ -1,5 +1,11 @@
 #  (2025-09-27)
 
+### Features
+
+* **ui:** improve config path input layout with responsive design ([d21f2a2](https://github.com/jeansordes/auto-expander/commit/d21f2a270866851bce6342ca0526e5414ea340e6))
+
+#  (2025-09-27)
+
 ### Bug Fixes
 
 * make explicit regex triggers respect cursor position ([2133658](https://github.com/jeansordes/auto-expander/commit/2133658e00bc97df5ed61f5ed331fcfb64bedc60))
