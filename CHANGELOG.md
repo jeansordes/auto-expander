@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* make explicit regex triggers respect cursor position ([2133658](https://github.com/jeansordes/auto-expander/commit/2133658e00bc97df5ed61f5ed331fcfb64bedc60))
+
+#  (2025-09-27)
+
+### Bug Fixes
+
 * **regex:** add multiline flag to regex triggers ([1ad31e0](https://github.com/jeansordes/auto-expander/commit/1ad31e0acf211a0867a2a363754d5a38e2b03924))
 
 #  (2025-09-27)
