@@ -77,3 +77,24 @@
     font-weight: 500;
     white-space: nowrap;
 }
+
+.config-path {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+.config-path .setting-item-control {
+    justify-content: space-between;
+
+}
+
+.config-path .setting-item-control input[type="text"] {
+    flex: 1;
+}
+
+@media (max-width: 686px) {
+    .config-path .setting-item-control {
+        flex-direction: column;
+    }
+}

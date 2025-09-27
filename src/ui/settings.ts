@@ -26,7 +26,8 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		// Config file path setting
 		const configSetting = new Setting(containerEl)
 			.setName('Config File Path')
-			.setDesc('Path to the file containing your snippets (supports .md and .json files). The JSON can be in a code block or as plain JSON.');
+			.setDesc('Path to the file containing your snippets (supports .md and .json files). The JSON can be in a code block or as plain JSON.')
+			.setClass('config-path');
 
 		// Create input field
 		this.configPathInput = configSetting.controlEl.createEl('input', {
