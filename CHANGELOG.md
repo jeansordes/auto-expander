@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* **regex:** add multiline flag to regex triggers ([1ad31e0](https://github.com/jeansordes/auto-expander/commit/1ad31e0acf211a0867a2a363754d5a38e2b03924))
+
+#  (2025-09-27)
+
+### Bug Fixes
+
 * **text-replacement:** fix cursor positioning when capture groups are used in replacement strings ([f97e379](https://github.com/jeansordes/auto-expander/commit/f97e379afbf9204cb2d8ccd7b2d778b47f5b6f61))
 
 #  (2025-09-26)
