@@ -189,52 +189,44 @@ export function matchesTrigger(
 				break;
 			}
 
-			if (compiledTrigger.isExplicitRegex) {
-				matchFound = true;
-				break;
+			const indices = extractMatchIndices(match);
+			const matchRange = indices ? getMatchRange(indices) : undefined;
+			const matchStart = matchRange ? matchRange[0] : match.index;
+			const matchEnd = matchRange ? matchRange[1] : match.index + match[0].length;
+			const cursorGroup = indices ? getCursorGroup(indices) : undefined;
+
+			if (!indices) {
+				log('Match indices not available; using fallback range based on match.index');
 			}
 
-				const indices = extractMatchIndices(match);
-				const matchRange = indices ? getMatchRange(indices) : undefined;
-				const matchStart = matchRange ? matchRange[0] : match.index;
-				const matchEnd = matchRange ? matchRange[1] : match.index + match[0].length;
-				const cursorGroup = indices ? getCursorGroup(indices) : undefined;
+			if (compiledTrigger.allowsFlexibleCursor) {
+				const cursorWithinMatch = cursorPos >= matchStart && cursorPos <= matchEnd;
+				log(`Flexible cursor check: matchRange=[${matchStart}, ${matchEnd}], cursorPos=${cursorPos}, cursorWithinMatch=${cursorWithinMatch}`);
 
-				if (!indices) {
-					log('Match indices not available; using fallback range based on match.index');
+				if (cursorWithinMatch) {
+					matchFound = true;
+					break;
 				}
-
-			if (!compiledTrigger.allowsFlexibleCursor) {
+			} else {
+				// For non-flexible cursor triggers, check cursor position
 				if (cursorGroup) {
 					const [cursorStart, cursorEnd] = cursorGroup;
 					const cursorWithinMarker = cursorPos >= cursorStart && cursorPos <= cursorEnd;
 					log(`Cursor marker check: markerRange=[${cursorStart}, ${cursorEnd}], cursorPos=${cursorPos}, withinMarker=${cursorWithinMarker}`);
 
-					if (!cursorWithinMarker) {
-						continue;
+					if (cursorWithinMarker) {
+						matchFound = true;
+						break;
 					}
+				} else {
+					const cursorAtMatchEnd = cursorPos === matchEnd;
+					log(`Fallback cursor check: matchEnd=${matchEnd}, cursorPos=${cursorPos}, cursorAtMatchEnd=${cursorAtMatchEnd}`);
 
-					matchFound = true;
-					break;
+					if (cursorAtMatchEnd) {
+						matchFound = true;
+						break;
+					}
 				}
-
-				const cursorAtMatchEnd = cursorPos === matchEnd;
-				log(`Fallback cursor check: matchEnd=${matchEnd}, cursorPos=${cursorPos}, cursorAtMatchEnd=${cursorAtMatchEnd}`);
-
-				if (!cursorAtMatchEnd) {
-					continue;
-				}
-
-				matchFound = true;
-				break;
-			}
-
-			const cursorWithinMatch = cursorPos >= matchStart && cursorPos <= matchEnd;
-			log(`Flexible cursor check: matchRange=[${matchStart}, ${matchEnd}], cursorPos=${cursorPos}, cursorWithinMatch=${cursorWithinMatch}`);
-
-			if (cursorWithinMatch) {
-				matchFound = true;
-				break;
 			}
 		}
 
