@@ -25,12 +25,22 @@ export default class AutoExpander extends Plugin {
 	// Event listener cleanup function
 	private unregisterExpansionListener?: () => void;
 
+	private workspaceInitialized = false;
+
 	async onload() {
 		this.initializeServices();
 		this.configureDebugging();
-		await this.initializePlugin();
+		this.settings = await this.settingsService.loadSettings();
 
-		log("Plugin loaded successfully");
+		if (this.app.workspace.layoutReady) {
+			await this.initializeWorkspaceFeatures();
+		} else {
+			this.app.workspace.onLayoutReady(() => {
+				void this.initializeWorkspaceFeatures().catch((error) => {
+					log('Deferred initialization failed:', error);
+				});
+			});
+		}
 	}
 
 	/**
@@ -62,17 +72,17 @@ export default class AutoExpander extends Plugin {
 	/**
 	 * Initialize plugin components and setup
 	 */
-        private async initializePlugin(): Promise<void> {
-                // Load settings
-                this.settings = await this.settingsService.loadSettings();
+	private async initializeWorkspaceFeatures(): Promise<void> {
+		if (this.workspaceInitialized) {
+			return;
+		}
+		this.workspaceInitialized = true;
 
-                await this.waitForWorkspaceReady();
+		// Initialize config file service with current path
+		this.configFileService.setConfigFilePath(this.settings.configFilePath);
 
-                // Initialize config file service with current path
-                this.configFileService.setConfigFilePath(this.settings.configFilePath);
-
-                // Load and validate snippets from config file
-                await this.loadSnippetsFromConfigFile();
+		// Load and validate snippets from config file
+		await this.loadSnippetsFromConfigFile();
 
 		// Set initial delays
 		this.expansionService.updateCommandDelay(this.settings.commandDelay);
@@ -90,18 +100,10 @@ export default class AutoExpander extends Plugin {
 		this.setupExpansionMechanism();
 
 		// Register global event listeners
-                this.registerGlobalEvents();
-        }
+		this.registerGlobalEvents();
 
-        private async waitForWorkspaceReady(): Promise<void> {
-                if (this.app.workspace.layoutReady) {
-                        return;
-                }
-
-                await new Promise<void>((resolve) => {
-                        this.app.workspace.onLayoutReady(() => resolve());
-                });
-        }
+		log("Plugin loaded successfully");
+	}
 
 	/**
 	 * Load snippets from the config file
