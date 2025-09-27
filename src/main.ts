@@ -62,15 +62,17 @@ export default class AutoExpander extends Plugin {
 	/**
 	 * Initialize plugin components and setup
 	 */
-	private async initializePlugin(): Promise<void> {
-		// Load settings
-		this.settings = await this.settingsService.loadSettings();
+        private async initializePlugin(): Promise<void> {
+                // Load settings
+                this.settings = await this.settingsService.loadSettings();
 
-		// Initialize config file service with current path
-		this.configFileService.setConfigFilePath(this.settings.configFilePath);
+                await this.waitForWorkspaceReady();
 
-		// Load and validate snippets from config file
-		await this.loadSnippetsFromConfigFile();
+                // Initialize config file service with current path
+                this.configFileService.setConfigFilePath(this.settings.configFilePath);
+
+                // Load and validate snippets from config file
+                await this.loadSnippetsFromConfigFile();
 
 		// Set initial delays
 		this.expansionService.updateCommandDelay(this.settings.commandDelay);
@@ -88,8 +90,18 @@ export default class AutoExpander extends Plugin {
 		this.setupExpansionMechanism();
 
 		// Register global event listeners
-		this.registerGlobalEvents();
-	}
+                this.registerGlobalEvents();
+        }
+
+        private async waitForWorkspaceReady(): Promise<void> {
+                if (this.app.workspace.layoutReady) {
+                        return;
+                }
+
+                await new Promise<void>((resolve) => {
+                        this.app.workspace.onLayoutReady(() => resolve());
+                });
+        }
 
 	/**
 	 * Load snippets from the config file
