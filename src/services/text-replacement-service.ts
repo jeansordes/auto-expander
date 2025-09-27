@@ -40,28 +40,47 @@ export class TextReplacementService {
 		}
 
 		const adjustedRange = this.adjustRangeForBackspace(range, triggerAction);
-		const replacementText = this.prepareReplacementText(snippet, match);
+		const prepared = this.prepareReplacementText(snippet, match);
 		const replacementStartIndex = adjustedRange.start;
 
-		this.performReplacement(editor, currentText, adjustedRange, replacementText);
+		this.performReplacement(editor, currentText, adjustedRange, prepared.text);
 
 		// Wait for the replacement to be fully applied before moving the cursor
-		await this.waitForReplacementToComplete(editor, replacementStartIndex, replacementText);
-		this.positionCursor(editor, snippet, replacementStartIndex);
+		await this.waitForReplacementToComplete(editor, replacementStartIndex, prepared.text);
+		this.positionCursor(editor, replacementStartIndex, prepared.cursorPos);
 	}
 
 	/**
 	 * Prepares the replacement text by removing cursor markers and substituting capture groups
+	 * Returns both the final replacement text and the cursor position within it
 	 */
-	private prepareReplacementText(snippet: ParsedSnippet, match: RegExpExecArray): string {
+	private prepareReplacementText(snippet: ParsedSnippet, match: RegExpExecArray): { text: string; cursorPos: number } {
 		const originalText = snippet.replacement.join('\n');
-		const _cursorPos = this.findCursorPositionInReplacement(originalText);
-		let replacementText = this.removeCursorMarkers(originalText);
+		const cursorMarkerPos = this.findCursorPositionInReplacement(originalText);
 
-		log(`Original replacement text before capture group substitution: "${replacementText}"`);
-		replacementText = this.substituteCaptureGroups(replacementText, match);
+		if (cursorMarkerPos === -1) {
+			// No cursor marker, cursor goes to end
+			let replacementText = this.removeCursorMarkers(originalText);
+			replacementText = this.substituteCaptureGroups(replacementText, match);
+			return { text: replacementText, cursorPos: replacementText.length };
+		}
 
-		return replacementText;
+		// Split the text at the cursor marker
+		const beforeCursor = originalText.slice(0, cursorMarkerPos);
+		const afterCursor = originalText.slice(cursorMarkerPos + this.getCursorMarkerLength(originalText, cursorMarkerPos));
+
+		// Process the parts separately
+		let beforeText = this.removeCursorMarkers(beforeCursor);
+		beforeText = this.substituteCaptureGroups(beforeText, match);
+
+		let afterText = this.removeCursorMarkers(afterCursor);
+		afterText = this.substituteCaptureGroups(afterText, match);
+
+		const finalText = beforeText + afterText;
+		const cursorPos = beforeText.length;
+
+		log(`Replacement prepared: "${finalText}" with cursor at position ${cursorPos}`);
+		return { text: finalText, cursorPos };
 	}
 
 	/**
@@ -84,17 +103,9 @@ export class TextReplacementService {
 	}
 
 	/**
-	 * Positions the cursor at the $0 marker location in the replacement text
+	 * Positions the cursor at the specified position in the replacement text
 	 */
-	private positionCursor(editor: Editor, snippet: ParsedSnippet, replacementStartIndex: number): void {
-		const cursorPosInReplacement = this.findCursorPositionInReplacement(
-			snippet.replacement.join('\n')
-		);
-
-		if (cursorPosInReplacement === -1) {
-			return;
-		}
-
+	private positionCursor(editor: Editor, replacementStartIndex: number, cursorPosInReplacement: number): void {
 		const textAfterReplacement = editor.getValue();
 		const cursorPosInFinalText = replacementStartIndex + cursorPosInReplacement;
 
@@ -121,6 +132,21 @@ export class TextReplacementService {
 
 		log('No cursor marker found in replacement text');
 		return -1;
+	}
+
+	/**
+	 * Gets the length of the cursor marker at the given position
+	 */
+	private getCursorMarkerLength(replacementText: string, position: number): number {
+		const cursorRegex = /\$\{?0(?::[^}]*)?\}?/;
+		cursorRegex.lastIndex = position;
+		const match = cursorRegex.exec(replacementText);
+
+		if (match && match.index === position) {
+			return match[0].length;
+		}
+
+		return 0;
 	}
 
 	/**

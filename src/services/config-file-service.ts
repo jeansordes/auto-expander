@@ -80,24 +80,36 @@ export class ConfigFileService {
 	}
 
 	/**
-	 * Read and parse the config file
+	 * Read and parse the config file with retry logic
 	 */
-	async readConfigFile(): Promise<{ snippets: Snippet[]; error?: string }> {
+	async readConfigFile(maxRetries: number = 3): Promise<{ snippets: Snippet[]; error?: string }> {
 		if (!this.isConfigFilePathValid()) {
 			return { snippets: [] };
 		}
 
-		try {
-			const content = await this.app.vault.read(this.configFile!);
-			const jsonContent = this.extractJsonFromFile(content);
-			return parseJsoncSnippets(jsonContent);
-		} catch (error) {
-			log('Error reading config file:', error);
-			return {
-				snippets: [],
-				error: `Failed to read config file: ${error instanceof Error ? error.message : 'Unknown error'}`
-			};
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				const content = await this.app.vault.read(this.configFile!);
+				const jsonContent = this.extractJsonFromFile(content);
+				return parseJsoncSnippets(jsonContent);
+			} catch (error) {
+				log(`Error reading config file (attempt ${attempt}/${maxRetries}):`, error);
+
+				// If this is not the last attempt, wait a bit before retrying
+				if (attempt < maxRetries) {
+					await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // Progressive delay
+				} else {
+					// Last attempt failed
+					return {
+						snippets: [],
+						error: `Failed to read config file after ${maxRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`
+					};
+				}
+			}
 		}
+
+		// This should never be reached, but TypeScript needs it
+		return { snippets: [] };
 	}
 
 	/**

@@ -59,8 +59,8 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 			}
 		});
 
-		// Note: Custom workspace events are not supported in Obsidian API
-		// The config file service will handle these events internally
+		// Config file changes are handled automatically by the main plugin
+		// listening for the 'auto-expander:config-file-changed' event
 
 		// Command delay setting
 		new Setting(containerEl)

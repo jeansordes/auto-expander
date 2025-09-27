@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import pluginInfos from '../../manifest.json';
 import { AutoExpanderSettings, ParsedSnippet, Snippet } from '../types';
-import { parseJsoncSnippets, validateAndParseSnippets, createSnippetMap, compileTrigger } from '../core';
+import { validateAndParseSnippets, createSnippetMap, compileTrigger } from '../core';
 
 const log = createDebug(pluginInfos.id + ':snippet-service');
 
@@ -53,31 +53,7 @@ export class SnippetService {
 		}
 	}
 
-	/**
-	 * Load and validate snippets from settings (legacy method)
-	 */
-	async loadSnippets(_settings: AutoExpanderSettings): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
-		// Legacy method for backward compatibility - should not be used
-		log('Warning: loadSnippets with settings is deprecated, use loadSnippetsFromRaw instead');
-		return { error: 'This method is deprecated' };
-	}
 
-	/**
-	 * Update snippet configuration (legacy method)
-	 */
-	async updateSnippets(snippetsJsonc: string, _settings: AutoExpanderSettings): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
-		// Legacy method for backward compatibility - should not be used
-		log('Warning: updateSnippets is deprecated, use loadSnippetsFromRaw instead');
-		try {
-			const { snippets, error: parseError } = parseJsoncSnippets(snippetsJsonc);
-			if (parseError) {
-				return { error: parseError };
-			}
-			return await this.loadSnippetsFromRaw(snippets);
-		} catch (error) {
-			return { error: error.message };
-		}
-	}
 
 	/**
 	 * Get parsed snippets
@@ -110,7 +86,7 @@ export class SnippetService {
 	/**
 	 * Reset snippets to the last valid configuration
 	 */
-	async resetToLastValidSnippets(settings: AutoExpanderSettings): Promise<{ error?: string }> {
+	async resetToLastValidSnippets(_settings: AutoExpanderSettings): Promise<{ error?: string }> {
 		if (!this.lastValidSnippets) {
 			const error = 'No valid snippet configuration available to reset to';
 			log(error);
@@ -118,7 +94,18 @@ export class SnippetService {
 		}
 
 		log('Resetting to last valid snippet configuration');
-		return await this.updateSnippets(this.lastValidSnippets, settings);
+		try {
+			const parsed = JSON.parse(this.lastValidSnippets);
+			if (!Array.isArray(parsed)) {
+				throw new Error('Last valid snippets is not an array');
+			}
+			const snippets: Snippet[] = parsed;
+			return await this.loadSnippetsFromRaw(snippets);
+		} catch (error) {
+			const errorMsg = `Failed to parse last valid snippets: ${error instanceof Error ? error.message : 'Unknown error'}`;
+			log(errorMsg);
+			return { error: errorMsg };
+		}
 	}
 
 	/**

@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Plugin } from 'obsidian';
+import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
 import logService from './services/log-service';
 import createDebug from 'debug';
 import pluginInfos from '../manifest.json';
@@ -94,20 +94,25 @@ export default class AutoExpander extends Plugin {
 	/**
 	 * Load snippets from the config file
 	 */
-	private async loadSnippetsFromConfigFile(): Promise<void> {
+	private async loadSnippetsFromConfigFile(): Promise<{ error?: string }> {
 		try {
 			const result = await this.configFileService.readConfigFile();
 			if (result.error) {
 				log('Config file parsing error:', result.error);
+				return { error: result.error };
 			} else {
 				// Parse and validate snippets
 				const parseResult = await this.snippetService.loadSnippetsFromRaw(result.snippets);
 				if (parseResult.error) {
 					log('Snippet validation error:', parseResult.error);
+					return { error: parseResult.error };
 				}
+				return {}; // Success
 			}
 		} catch (error) {
+			const errorMsg = `Failed to load config file: ${error instanceof Error ? error.message : 'Unknown error'}`;
 			log('Error loading snippets from config file:', error);
+			return { error: errorMsg };
 		}
 	}
 
@@ -168,7 +173,13 @@ export default class AutoExpander extends Plugin {
 	 * Register global event listeners
 	 */
 	private registerGlobalEvents(): void {
-		// No global event listeners needed for this plugin
+		// Listen for config file changes to reload snippets automatically
+		this.registerEvent(
+			// @ts-expect-error: Custom workspace event not in Obsidian types
+			this.app.workspace.on('auto-expander:config-file-changed', async () => {
+				await this.handleConfigFileChanged();
+			})
+		);
 	}
 
 	/**
@@ -282,9 +293,16 @@ export default class AutoExpander extends Plugin {
 		if ('configFilePath' in newSettings) {
 			this.configFileService.setConfigFilePath(this.settings.configFilePath);
 			// Reload snippets from new config file
-			await this.loadSnippetsFromConfigFile();
-			// Update expansion mechanism with new settings
-			this.setupExpansionMechanism();
+			const result = await this.loadSnippetsFromConfigFile();
+			if (result.error) {
+				// Show persistent error notice that requires user click to dismiss
+				new Notice(`Auto Expander: Failed to load config file - ${result.error}`, 0);
+			} else {
+				// Show success notice (can auto-dismiss after 3 seconds)
+				new Notice('Auto Expander: Config file loaded successfully', 3000);
+				// Update expansion mechanism with new settings
+				this.setupExpansionMechanism();
+			}
 		}
 	}
 
@@ -292,22 +310,17 @@ export default class AutoExpander extends Plugin {
 	 * Handle config file changes (called by workspace event)
 	 */
 	async handleConfigFileChanged(): Promise<void> {
-		await this.loadSnippetsFromConfigFile();
-		this.setupExpansionMechanism();
+		const result = await this.loadSnippetsFromConfigFile();
+		if (result.error) {
+			// Show persistent error notice that requires user click to dismiss
+			new Notice(`Auto Expander: Failed to reload config file - ${result.error}`, 0);
+		} else {
+			// Show success notice (can auto-dismiss after 3 seconds)
+			new Notice('Auto Expander: Config file reloaded successfully', 3000);
+			this.setupExpansionMechanism();
+		}
 	}
 
-	/**
-	 * Update snippet configuration (legacy method for compatibility)
-	 */
-	async updateSnippets(snippetsJsonc: string): Promise<{ error?: string; invalidSnippets?: ParsedSnippet[] }> {
-		// This method is kept for compatibility but should not be used with config files
-		// For config files, use handleConfigFileChanged instead
-		await this.settingsService.setSetting('configFilePath', snippetsJsonc);
-		this.settings = await this.settingsService.loadSettings();
-		const result = await this.snippetService.loadSnippets(this.settings);
-		this.setupExpansionMechanism(); // Update expansion mechanism
-		return result;
-	}
 
 	/**
 	 * Get parsed snippets
