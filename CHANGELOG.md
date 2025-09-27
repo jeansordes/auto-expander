@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* avoid blocking startup waiting for layout ([83244cb](https://github.com/jeansordes/auto-expander/commit/83244cbeb7b032d610cbf7a61a68c00c4ba54561))
+
+#  (2025-09-27)
+
+### Bug Fixes
+
 * ensure config file path loads after startup ([95e0f7c](https://github.com/jeansordes/auto-expander/commit/95e0f7c5ca427be48db0d1e02ef09af6351c1069))
 
 #  (2025-09-27)
