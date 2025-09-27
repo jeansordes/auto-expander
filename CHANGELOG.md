@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* ensure config file path loads after startup ([95e0f7c](https://github.com/jeansordes/auto-expander/commit/95e0f7c5ca427be48db0d1e02ef09af6351c1069))
+
+#  (2025-09-27)
+
+### Bug Fixes
+
 * correct line numbers in config file syntax error messages ([618d17e](https://github.com/jeansordes/auto-expander/commit/618d17e3fce44a9aae251c5d3fed0bd4191162a2))
 
 #  (2025-09-27)
