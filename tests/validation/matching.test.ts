@@ -20,4 +20,12 @@ describe('matchesTrigger cursor evaluation', () => {
 
 		expect(matchesTrigger(compiled, text, cursorInside, 'instant')).toBe(true);
 	});
+
+	it('matches multiline regex triggers with caret anchor', () => {
+		const compiled = compileTrigger('/^[ ]*- ${0:space}/');
+		const text = '-\n- ';
+		const cursorPos = text.length; // At the end of the second line
+
+		expect(matchesTrigger(compiled, text, cursorPos, 'space')).toBe(true);
+	});
 });

@@ -126,9 +126,9 @@ export function compileTrigger(
     }
 
 	try {
-		const regex = new RegExp(processedTrigger, 'dg');
+		const regex = new RegExp(processedTrigger, 'dgm');
 
-		log(`Compiled trigger "${trigger}" -> pattern: /${processedTrigger}/dg`);
+		log(`Compiled trigger "${trigger}" -> pattern: /${processedTrigger}/dgm`);
 
 		return {
 			regex,
