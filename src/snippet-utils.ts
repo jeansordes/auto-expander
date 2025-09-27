@@ -38,7 +38,7 @@ export function parseCursorMarkerOptions(trigger: string): string[] {
 		.filter((option) => option.length > 0 && VALID_TRIGGER_OPTIONS.includes(option));
 }
 
-export function parseJsoncSnippets(jsoncString: string): { snippets: Snippet[]; error?: string } {
+export function parseJsoncSnippets(jsoncString: string, lineOffset: number = 0): { snippets: Snippet[]; error?: string } {
 	try {
 		const rawInput = jsoncString ?? '';
 		if (rawInput.trim().length === 0) {
@@ -91,6 +91,14 @@ export function parseJsoncSnippets(jsoncString: string): { snippets: Snippet[]; 
 		return { snippets };
 	} catch (error) {
 		let message = error instanceof Error ? error.message : 'Unknown error';
+
+		// Adjust line numbers if this is a JSON5 syntax error
+		if (error instanceof Error && 'lineNumber' in error && typeof error.lineNumber === 'number') {
+			const originalLineNumber = error.lineNumber + lineOffset;
+			// Replace the line number in the error message
+			message = message.replace(/at (\d+):(\d+)/, `at ${originalLineNumber}:$2`);
+		}
+
 		if (message.startsWith('JSON5: ')) {
 			message = message.slice(7);
 		}

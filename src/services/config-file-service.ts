@@ -90,8 +90,8 @@ export class ConfigFileService {
 		for (let attempt = 1; attempt <= maxRetries; attempt++) {
 			try {
 				const content = await this.app.vault.read(this.configFile!);
-				const jsonContent = this.extractJsonFromFile(content);
-				return parseJsoncSnippets(jsonContent);
+				const { jsonContent, lineOffset } = this.extractJsonFromFile(content);
+				return parseJsoncSnippets(jsonContent, lineOffset);
 			} catch (error) {
 				log(`Error reading config file (attempt ${attempt}/${maxRetries}):`, error);
 
@@ -180,17 +180,36 @@ auto-expander-config: true
 	/**
 	 * Extract JSON content from file (handles frontmatter and code blocks)
 	 */
-	private extractJsonFromFile(content: string): string {
+	private extractJsonFromFile(content: string): { jsonContent: string; lineOffset: number } {
+		let currentLine = 0;
+
 		// Remove frontmatter if present
 		const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
-		const cleanedContent = content.replace(frontmatterRegex, '');
+		const frontmatterMatch = content.match(frontmatterRegex);
+		let cleanedContent = content;
+		if (frontmatterMatch) {
+			const frontmatterLines = frontmatterMatch[0].split('\n').length - 1; // -1 because the last \n is included in the match
+			currentLine += frontmatterLines;
+			cleanedContent = content.replace(frontmatterRegex, '');
+		}
 
 		// Look for JSON code blocks
 		const codeBlockRegex = /```(?:json|JSON)?\n([\s\S]*?)\n```/;
 		const match = cleanedContent.match(codeBlockRegex);
 
 		if (match) {
-			return match[1].trim();
+			// Count lines up to the code block content
+			const beforeCodeBlock = cleanedContent.substring(0, match.index);
+			const beforeLines = beforeCodeBlock.split('\n').length - 1; // -1 because split includes empty string at start
+			currentLine += beforeLines;
+
+			// Add 1 more line for the opening ```json line
+			currentLine += 1;
+
+			return {
+				jsonContent: match[1].trim(),
+				lineOffset: currentLine
+			};
 		}
 
 		// If no code block found, try to find the first valid JSON object/array
@@ -198,11 +217,22 @@ auto-expander-config: true
 		const jsonMatch = cleanedContent.match(jsonRegex);
 
 		if (jsonMatch) {
-			return jsonMatch[1].trim();
+			// Count lines up to the JSON content
+			const beforeJson = cleanedContent.substring(0, jsonMatch.index);
+			const beforeLines = beforeJson.split('\n').length - 1;
+			currentLine += beforeLines;
+
+			return {
+				jsonContent: jsonMatch[1].trim(),
+				lineOffset: currentLine
+			};
 		}
 
-		// Fallback to entire content
-		return cleanedContent.trim();
+		// Fallback to entire content (no offset needed since we're using the whole content)
+		return {
+			jsonContent: cleanedContent.trim(),
+			lineOffset: 0
+		};
 	}
 
 	/**
