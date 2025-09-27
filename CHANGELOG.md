@@ -1,5 +1,7 @@
 #  (2025-09-27)
 
+#  (2025-09-27)
+
 ### Features
 
 * **ui:** improve config path input layout with responsive design ([d21f2a2](https://github.com/jeansordes/auto-expander/commit/d21f2a270866851bce6342ca0526e5414ea340e6))

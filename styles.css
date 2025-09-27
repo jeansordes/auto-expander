@@ -84,11 +84,6 @@
     justify-content: flex-start;
 }
 
-.config-path .setting-item-control {
-    justify-content: space-between;
-
-}
-
 .config-path .setting-item-control input[type="text"] {
     flex: 1;
 }
