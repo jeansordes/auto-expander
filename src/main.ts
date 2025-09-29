@@ -49,8 +49,8 @@ export default class AutoExpander extends Plugin {
 	private initializeServices(): void {
 		this.settingsService = new SettingsService(this);
 		this.snippetService = new SnippetService();
-		this.expansionService = new ExpansionService(this.app);
 		this.configFileService = new ConfigFileService(this.app);
+		this.expansionService = new ExpansionService(this.app, this.configFileService.getConfigFilePath());
 	}
 
 	/**
@@ -101,6 +101,14 @@ export default class AutoExpander extends Plugin {
 
 		// Register global event listeners
 		this.registerGlobalEvents();
+
+		// Listen for config file renames to update expansion service
+		this.registerEvent(
+			// @ts-expect-error: Custom workspace event not in Obsidian types
+			this.app.workspace.on('auto-expander:config-file-renamed', (newPath: string) => {
+				this.expansionService.updateConfigFilePath(newPath);
+			})
+		);
 
 		log("Plugin loaded successfully");
 	}
@@ -306,6 +314,7 @@ export default class AutoExpander extends Plugin {
 		// Update config file path if changed
 		if ('configFilePath' in newSettings) {
 			this.configFileService.setConfigFilePath(this.settings.configFilePath);
+			this.expansionService.updateConfigFilePath(this.settings.configFilePath);
 			// Reload snippets from new config file
 			const result = await this.loadSnippetsFromConfigFile();
 			if (result.error) {

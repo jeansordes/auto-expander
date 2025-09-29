@@ -47,14 +47,20 @@ export class ExpansionService {
 	private readonly app: App;
 	private readonly snippetExecutor: SnippetExecutor;
 	private lastKeyboardInstantTimestamp: number | null = null;
+	private configFilePath: string;
 
-	constructor(app: App) {
+	constructor(app: App, configFilePath: string = '') {
 		this.app = app;
 		this.snippetExecutor = new SnippetExecutor(app);
+		this.configFilePath = configFilePath;
 	}
 
 	updateCommandDelay(delay: number): void {
 		this.snippetExecutor.updateCommandDelay(delay);
+	}
+
+	updateConfigFilePath(configFilePath: string): void {
+		this.configFilePath = configFilePath;
 	}
 
 	setupExpansionMechanism(
@@ -186,6 +192,12 @@ export class ExpansionService {
 
 		const activeElement = document.activeElement;
 		if (!activeElement || !view.containerEl.contains(activeElement)) {
+			return false;
+		}
+
+		// Prevent expansion when editing the config file
+		if (this.configFilePath && view.file?.path === this.configFilePath) {
+			log(`Expansion blocked: currently editing config file (${this.configFilePath})`);
 			return false;
 		}
 
