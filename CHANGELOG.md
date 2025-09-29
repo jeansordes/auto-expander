@@ -1,3 +1,9 @@
+#  (2025-09-29)
+
+### Bug Fixes
+
+* prevent expansion when editing config file ([30092f0](https://github.com/jeansordes/auto-expander/commit/30092f0c64f28dc25a1177dc48925445e9cfa99c))
+
 #  (2025-09-27)
 
 ### Bug Fixes
