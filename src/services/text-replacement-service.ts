@@ -234,13 +234,12 @@ export class TextReplacementService {
 
 	/**
 	 * Adjusts match range for backspace trigger action
+	 * Note: Backspace adjustment was causing issues with cursor positioning.
+	 * The match already accounts for the cursor position after backspace.
 	 */
-	private adjustRangeForBackspace(range: { start: number; end: number }, triggerAction: string): { start: number; end: number } {
-		if (triggerAction !== 'backspace') {
-			return range;
-		}
-		const adjustedEnd = Math.max(range.start, range.end - 1);
-		return { start: range.start, end: adjustedEnd };
+	private adjustRangeForBackspace(range: { start: number; end: number }, _triggerAction: string): { start: number; end: number } {
+		// For backspace, don't adjust the range - the match includes the correct range
+		return range;
 	}
 
 	/**

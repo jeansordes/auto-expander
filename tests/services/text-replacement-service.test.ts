@@ -19,16 +19,21 @@ const mockEditor = {
 	getValue: jest.fn(() => currentText),
 	getRange: jest.fn((start: EditorPosition, end: EditorPosition) => {
 		// Simple mock that returns substring based on line/ch positions
-		// For this test, assume single line for simplicity
-		if (start.line === 1 && end.line === 1) {
-			const lineStart = 'foo\n'.length;
-			return currentText.slice(lineStart + start.ch, lineStart + end.ch);
+		// Assume single line for simplicity, or handle line 0 vs line 1
+		let lineStart = 0;
+		if (start.line === 1) {
+			const newlineIndex = currentText.indexOf('\n');
+			lineStart = newlineIndex >= 0 ? newlineIndex + 1 : 0;
 		}
-		return '';
+		return currentText.slice(lineStart + start.ch, lineStart + end.ch);
 	}),
 	replaceRange: jest.fn((text: string, start: EditorPosition, end: EditorPosition) => {
 		// Simulate the replacement
-		const lineStart = 'foo\n'.length;
+		let lineStart = 0;
+		if (start.line === 1) {
+			const newlineIndex = currentText.indexOf('\n');
+			lineStart = newlineIndex >= 0 ? newlineIndex + 1 : 0;
+		}
 		const startIdx = lineStart + start.ch;
 		const endIdx = lineStart + end.ch;
 		currentText = currentText.slice(0, startIdx) + text + currentText.slice(endIdx);
@@ -42,6 +47,8 @@ describe('TextReplacementService', () => {
 
 	beforeEach(() => {
 		service = new TextReplacementService();
+		// Mock the async waiting method to avoid infinite recursion in tests
+		jest.spyOn(service as unknown as { waitForReplacementToComplete: jest.Mock }, 'waitForReplacementToComplete').mockResolvedValue(undefined);
 		jest.clearAllMocks();
 		currentText = 'foo\nbtw\nbar';
 		mockEditor.getCursor.mockReturnValue({ line: 1, ch: 3 }); // After "btw"
@@ -128,6 +135,47 @@ describe('TextReplacementService', () => {
 
 			// Critical: verify the final text preserves the newline
 			expect(currentText).toBe('foo\nBy the way\nbar');
+		});
+
+		it('should handle backspace trigger without extra trailing space', async () => {
+			// Reproduce the user's issue:
+			// Initial text: "- ["] " (cursor after the quote)
+			// User presses backspace -> cursor moves to "- ["]|" (after quote)
+			// Trigger matches and should replace with "- [ ]" with cursor after closing bracket
+
+			currentText = '- ["] ';
+			mockEditor.getCursor.mockReturnValue({ line: 0, ch: 5 }); // After the quote
+
+			const snippet: ParsedSnippet = {
+				id: 'checkbox-backspace',
+				trigger: '/\\s*- \\[[^ ]\\] ${0:backspace}/',
+				replacement: ['- [ ]$0'], // Note: no space before $0
+				commands: [],
+				cursorMarkerOptions: ['backspace'],
+				regex: true,
+				isValid: true
+			};
+
+			// The match should be "- ["]" followed by cursor marker
+			const match: RegExpExecArray & { indices: Array<[number, number]> } = {
+				0: '- ["]\uE000', // Match includes cursor marker
+				index: 0, // Start at beginning
+				input: currentText,
+				groups: undefined,
+				indices: [[0, 5]] // Match "- ["]" in original text
+			} as RegExpExecArray & { indices: Array<[number, number]> };
+
+			// Execute the replacement with backspace trigger
+			await service.replaceText(mockEditor as unknown as Editor, snippet, currentText, match, 'backspace');
+
+			// Should replace "- ["]" with "- [ ]" (no trailing space)
+			expect(mockEditor.replaceRange).toHaveBeenCalledWith('- [ ]', { line: 0, ch: 0 }, { line: 0, ch: 5 }); // Full range, no backspace adjustment
+
+			// Cursor should be positioned after the closing bracket
+			expect(mockEditor.setCursor).toHaveBeenCalledWith({ line: 0, ch: 5 });
+
+			// Final text should be "- [ ] " (preserving the original trailing space)
+			expect(currentText).toBe('- [ ] ');
 		});
 	});
 });
