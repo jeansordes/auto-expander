@@ -64,6 +64,12 @@ export class RegexMatcher {
 				match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText
 			);
 			if (cursorMatch) {
+				// Adjust indices to account for cursor marker removal
+				const indices = this.getMatchIndices(cursorMatch);
+				if (indices) {
+					const adjustedIndices: MatchIndices = indices.map(([start, end]) => [start, end - 1]);
+					Reflect.set(cursorMatch, 'indices', adjustedIndices);
+				}
 				return cursorMatch;
 			}
 		}
@@ -74,6 +80,14 @@ export class RegexMatcher {
 				(match) => match.index === preferredIndex && match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText
 			);
 			if (exactMatch) {
+				// Adjust indices if match contains cursor marker
+				if (exactMatch[0].includes(CURSOR_MARKER_CHAR)) {
+					const indices = this.getMatchIndices(exactMatch);
+					if (indices) {
+						const adjustedIndices: MatchIndices = indices.map(([start, end]) => [start, end - 1]);
+						Reflect.set(exactMatch, 'indices', adjustedIndices);
+					}
+				}
 				return exactMatch;
 			}
 
@@ -92,11 +106,28 @@ export class RegexMatcher {
 			}
 
 			if (closestMatch) {
+				// Adjust indices if match contains cursor marker
+				if (closestMatch[0].includes(CURSOR_MARKER_CHAR)) {
+					const indices = this.getMatchIndices(closestMatch);
+					if (indices) {
+						const adjustedIndices: MatchIndices = indices.map(([start, end]) => [start, end - 1]);
+						Reflect.set(closestMatch, 'indices', adjustedIndices);
+					}
+				}
 				return closestMatch;
 			}
 		}
 
-		return matches.find((match) => match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText) ?? null;
+		const fallbackMatch = matches.find((match) => match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText);
+		if (fallbackMatch && fallbackMatch[0].includes(CURSOR_MARKER_CHAR)) {
+			// Adjust indices if match contains cursor marker
+			const indices = this.getMatchIndices(fallbackMatch);
+			if (indices) {
+				const adjustedIndices: MatchIndices = indices.map(([start, end]) => [start, end - 1]);
+				Reflect.set(fallbackMatch, 'indices', adjustedIndices);
+			}
+		}
+		return fallbackMatch ?? null;
 	}
 
 	/**
