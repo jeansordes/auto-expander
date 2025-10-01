@@ -16,7 +16,7 @@
     },
     { // recipies[3]
         // since we want to use a regex to detect the date header, we wrap the trigger in /.../
-        "trigger": "/${0:newline}(.)\n((#+) .*[0-9]{4}-[0-9]{2}-[0-9]{2}.*)/",
+        "trigger": "/(.+)${0:newline}\n((#+) .*[0-9]{4}-[0-9]{2}-[0-9]{2}.*)/",
         // if we hit enter right above a date header, it inserts a new header with the date and the rest of the line, and triggers the templater command to replace the date in the file
         // (Useful for when the user wants to insert a date header at the top of the file)
         "replacement": [
