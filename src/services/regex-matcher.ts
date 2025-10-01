@@ -20,13 +20,17 @@ export class RegexMatcher {
 		cursorIndex: number
 	): RegExpExecArray | null {
 		const searchRegex = this.createSearchRegex(compiledTrigger.regex);
-		const matches = this.collectMatches(searchRegex, text);
+		// Insert cursor marker at cursor position
+		const CURSOR_MARKER_CHAR = '\uE000';
+		const textWithCursor = text.slice(0, cursorIndex) + CURSOR_MARKER_CHAR + text.slice(cursorIndex);
+
+		const matches = this.collectMatches(searchRegex, textWithCursor);
 		if (matches.length === 0) {
 			return null;
 		}
 
-		// For flexible cursor positioning, find the match that contains the cursor
-		const cursorMatch = matches.find((match) => this.matchContainsCursor(match, cursorIndex));
+		// Find the match that contains the cursor marker
+		const cursorMatch = matches.find((match) => match[0].includes(CURSOR_MARKER_CHAR));
 
 		// If no match contains the cursor, return the first match as fallback
 		return cursorMatch ?? matches[0] ?? null;
@@ -43,10 +47,22 @@ export class RegexMatcher {
 		cursorIndex?: number
 	): RegExpExecArray | null {
 		const searchRegex = this.createSearchRegex(compiledTrigger.regex);
-		const matches = this.collectMatches(searchRegex, text);
+		const CURSOR_MARKER_CHAR = '\uE000';
+
+		// If we have a cursor index, insert the cursor marker for accurate matching
+		let textToSearch = text;
+		if (typeof cursorIndex === 'number') {
+			textToSearch = text.slice(0, cursorIndex) + CURSOR_MARKER_CHAR + text.slice(cursorIndex);
+		}
+
+		const matches = this.collectMatches(searchRegex, textToSearch);
 
 		if (typeof cursorIndex === 'number') {
-			const cursorMatch = matches.find((match) => this.matchContainsCursorInclusive(match, cursorIndex) && match[0] === expectedMatchText);
+			// Find match that contains cursor marker and matches expected text (with cursor marker removed)
+			const cursorMatch = matches.find((match) =>
+				match[0].includes(CURSOR_MARKER_CHAR) &&
+				match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText
+			);
 			if (cursorMatch) {
 				return cursorMatch;
 			}
@@ -55,7 +71,7 @@ export class RegexMatcher {
 		if (preferredMatch) {
 			const preferredIndex = preferredMatch.index;
 			const exactMatch = matches.find(
-				(match) => match.index === preferredIndex && match[0] === expectedMatchText
+				(match) => match.index === preferredIndex && match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText
 			);
 			if (exactMatch) {
 				return exactMatch;
@@ -64,7 +80,8 @@ export class RegexMatcher {
 			let closestMatch: RegExpExecArray | null = null;
 			let smallestDistance = Number.POSITIVE_INFINITY;
 			for (const candidate of matches) {
-				if (candidate[0] !== expectedMatchText) {
+				const cleanMatch = candidate[0].replace(CURSOR_MARKER_CHAR, '');
+				if (cleanMatch !== expectedMatchText) {
 					continue;
 				}
 				const distance = Math.abs(candidate.index - preferredIndex);
@@ -79,7 +96,7 @@ export class RegexMatcher {
 			}
 		}
 
-		return matches.find((match) => match[0] === expectedMatchText) ?? null;
+		return matches.find((match) => match[0].replace(CURSOR_MARKER_CHAR, '') === expectedMatchText) ?? null;
 	}
 
 	/**

@@ -1,7 +1,7 @@
 import { Notice } from 'obsidian';
 import createDebug from 'debug';
 import pluginInfos from '../manifest.json';
-import { extractMatchIndices, getCursorGroup, getMatchRange } from './utils/regex-indices';
+// Note: regex-indices utilities are no longer used after switching to Unicode marker approach
 import { parseCursorMarkerOptions } from './snippet-utils';
 
 export {
@@ -13,8 +13,11 @@ export {
 
 const log = createDebug(pluginInfos.id + ':core');
 
+// Unicode Private Use Area character used to mark cursor position in text
+const CURSOR_MARKER_CHAR = '\uE000';
+
 // Cursor marker regex to extract options (single match)
-const CURSOR_MARKER_REGEX = /\$\{?0(?::([^}]+))?\}?/;
+const _CURSOR_MARKER_REGEX = /\$\{?0(?::([^}]+))?\}?/;
 // Global variant for iterating through cursor markers
 const CURSOR_MARKER_GLOBAL_REGEX = /\$\{?0(?::([^}]+))?\}?/g;
 
@@ -46,7 +49,7 @@ function processTriggerPattern(source: string, escapeLiterals: boolean): Trigger
     while ((match = CURSOR_MARKER_GLOBAL_REGEX.exec(source)) !== null) {
 		const literalChunk = source.slice(lastIndex, match.index);
 		parts.push(escapeLiterals ? escapeRegex(literalChunk) : literalChunk);
-		parts.push('(?<CURSOR>)');
+		parts.push(CURSOR_MARKER_CHAR);
 
 		if (!foundCursorMarker) {
 			const markerOptions = match[1] ? parseCursorMarkerOptions(match[0]) : ['instant'];
@@ -58,7 +61,9 @@ function processTriggerPattern(source: string, escapeLiterals: boolean): Trigger
     }
 
     const trailingChunk = source.slice(lastIndex);
-    parts.push(escapeLiterals ? escapeRegex(trailingChunk) : trailingChunk);
+    const processedChunk = escapeLiterals ? escapeRegex(trailingChunk) : trailingChunk; 
+
+    parts.push(processedChunk);
 
     return {
         pattern: parts.join(''),
@@ -79,38 +84,19 @@ export function compileTrigger(
 	let processedTrigger: string;
 	let options: string[] = [];
 	let hasCursorMarker = false;
-	let allowsFlexibleCursor = false;
+	const allowsFlexibleCursor = false;
 
 	if (isExplicitRegex) {
 		// Explicit regex trigger: use the pattern inside the slashes without escaping
 		const patternToProcess = trigger.slice(1, -1);
 
-		// Check if cursor marker is at the beginning for flexible cursor positioning
-		CURSOR_MARKER_REGEX.lastIndex = 0;
-		const cursorMatch = CURSOR_MARKER_REGEX.exec(patternToProcess);
+		// Use standard processing for all explicit regex triggers
+		const result = processTriggerPattern(patternToProcess, false);
+		processedTrigger = result.pattern;
+		options = result.foundCursorMarker ? result.options : ['instant'];
+		hasCursorMarker = result.foundCursorMarker;
 
-		if (cursorMatch && cursorMatch.index === 0) {
-			// Cursor marker is at the beginning - for flexible cursor positioning,
-			// remove the cursor marker and allow matching anywhere in the pattern
-			const markerOptions = cursorMatch[1] ? parseCursorMarkerOptions(cursorMatch[0]) : ['instant'];
-			options = markerOptions.length > 0 ? markerOptions : ['instant'];
-			hasCursorMarker = true;
-			allowsFlexibleCursor = true;
-
-			// Remove cursor marker and keep the user's pattern
-			processedTrigger = patternToProcess.slice(cursorMatch[0].length);
-
-			log(`Processing explicit regex trigger with flexible cursor positioning: ${processedTrigger}`);
-		} else {
-			// Cursor marker is elsewhere or not present - use standard processing
-			const result = processTriggerPattern(patternToProcess, false);
-			processedTrigger = result.pattern;
-			options = result.foundCursorMarker ? result.options : ['instant'];
-			hasCursorMarker = result.foundCursorMarker;
-			log(`Processing explicit regex trigger with standard processing: ${processedTrigger}`);
-		}
-
-		if (!hasCursorMarker && !/(?<CURSOR>)/.test(processedTrigger)) {
+		if (!hasCursorMarker && !processedTrigger.includes(CURSOR_MARKER_CHAR)) {
 			log(`Explicit regex trigger without cursor marker detected; matching relies on user-provided pattern`);
 		}
     } else {
@@ -121,7 +107,7 @@ export function compileTrigger(
         hasCursorMarker = result.foundCursorMarker;
 
         if (!hasCursorMarker) {
-            processedTrigger += '(?<CURSOR>)';
+            processedTrigger += CURSOR_MARKER_CHAR;
         }
     }
 
@@ -137,9 +123,9 @@ export function compileTrigger(
 			isExplicitRegex,
 			allowsFlexibleCursor
 		};
-	} catch (error) { 
+	} catch (error) {
 		log(`Error compiling regex for trigger "${trigger}":`, error);
-		const escapedTrigger = escapeRegex(trigger) + '(?<CURSOR>)';
+		const escapedTrigger = escapeRegex(trigger) + CURSOR_MARKER_CHAR;
 		return {
 			regex: new RegExp(escapedTrigger, 'dg'),
 			options: ['instant'],
@@ -161,6 +147,7 @@ function eventTypeAllowed(eventType: string, options: string[]): boolean {
 /**
  * Tests if a compiled trigger matches the given input at cursor position
  * Handles both explicit regex triggers and standard cursor marker triggers
+ * Uses Unicode Private Use Area character to mark cursor position
  */
 export function matchesTrigger(
 		compiledTrigger: { regex: RegExp; options: string[]; isExplicitRegex?: boolean; allowsFlexibleCursor?: boolean },
@@ -169,16 +156,21 @@ export function matchesTrigger(
 		eventType: string
 	): boolean {
 	const regex = compiledTrigger.regex;
-	let match: RegExpExecArray | null = null;
 	let matchFound = false;
 	let guardTimedOut = false;
 	let iterationCount = 0;
 	const startTime = Date.now();
 
 	try {
+		// Insert cursor marker character at cursor position
+		const textWithCursor = input.slice(0, cursorPos) + CURSOR_MARKER_CHAR + input.slice(cursorPos);
+
+		log(`Testing trigger with cursor at position ${cursorPos}, text length: ${input.length} -> ${textWithCursor.length}`);
+
 		regex.lastIndex = 0;
 
-		while ((match = regex.exec(input)) !== null) {
+		let match: RegExpExecArray | null = null;
+		while ((match = regex.exec(textWithCursor)) !== null) {
 			iterationCount++;
 			log(`Regex match found: "${match[0]}" at position ${match.index} (iteration ${iterationCount})`);
 
@@ -189,44 +181,11 @@ export function matchesTrigger(
 				break;
 			}
 
-			const indices = extractMatchIndices(match);
-			const matchRange = indices ? getMatchRange(indices) : undefined;
-			const matchStart = matchRange ? matchRange[0] : match.index;
-			const matchEnd = matchRange ? matchRange[1] : match.index + match[0].length;
-			const cursorGroup = indices ? getCursorGroup(indices) : undefined;
-
-			if (!indices) {
-				log('Match indices not available; using fallback range based on match.index');
-			}
-
-			if (compiledTrigger.allowsFlexibleCursor) {
-				const cursorWithinMatch = cursorPos >= matchStart && cursorPos <= matchEnd;
-				log(`Flexible cursor check: matchRange=[${matchStart}, ${matchEnd}], cursorPos=${cursorPos}, cursorWithinMatch=${cursorWithinMatch}`);
-
-				if (cursorWithinMatch) {
-					matchFound = true;
-					break;
-				}
-			} else {
-				// For non-flexible cursor triggers, check cursor position
-				if (cursorGroup) {
-					const [cursorStart, cursorEnd] = cursorGroup;
-					const cursorWithinMarker = cursorPos >= cursorStart && cursorPos <= cursorEnd;
-					log(`Cursor marker check: markerRange=[${cursorStart}, ${cursorEnd}], cursorPos=${cursorPos}, withinMarker=${cursorWithinMarker}`);
-
-					if (cursorWithinMarker) {
-						matchFound = true;
-						break;
-					}
-				} else {
-					const cursorAtMatchEnd = cursorPos === matchEnd;
-					log(`Fallback cursor check: matchEnd=${matchEnd}, cursorPos=${cursorPos}, cursorAtMatchEnd=${cursorAtMatchEnd}`);
-
-					if (cursorAtMatchEnd) {
-						matchFound = true;
-						break;
-					}
-				}
+			// If we find a match that contains the cursor marker, it's a valid match
+			if (match[0].includes(CURSOR_MARKER_CHAR)) {
+				matchFound = true;
+				log(`Match contains cursor marker at position ${cursorPos}`);
+				break;
 			}
 		}
 

@@ -101,10 +101,14 @@ export class SnippetExecutor {
 		triggerAction: string
 	): Promise<void> {
 		const currentText = editor.getValue();
+		// Remove cursor marker from match text for locating
+		const CURSOR_MARKER_CHAR = '\uE000';
+		const cleanMatchText = match[0].replace(CURSOR_MARKER_CHAR, '');
+
 		const currentMatch = this.regexMatcher.locateCurrentMatch(
 			compiledTrigger,
 			currentText,
-			match[0],
+			cleanMatchText,
 			match,
 			context.cursorCharIndex
 		);
