@@ -1,5 +1,11 @@
 #  (2025-10-01)
 
+### Bug Fixes
+
+* correct text replacement to preserve newlines after cursor ([ac253d8](https://github.com/jeansordes/auto-expander/commit/ac253d8bd5d858e2837c78a2731854d7306d0cff))
+
+#  (2025-10-01)
+
 #  (2025-09-29)
 
 ### Bug Fixes
