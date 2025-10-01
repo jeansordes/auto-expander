@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+* **text-replacement:** remove incorrect backspace range adjustment ([1ac066f](https://github.com/jeansordes/auto-expander/commit/1ac066f54f16eb0e5a41f914daa67068ce5011e8))
+
+#  (2025-10-01)
+
+### Bug Fixes
+
 * correct text replacement to preserve newlines after cursor ([ac253d8](https://github.com/jeansordes/auto-expander/commit/ac253d8bd5d858e2837c78a2731854d7306d0cff))
 
 #  (2025-10-01)
