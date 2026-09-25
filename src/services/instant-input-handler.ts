@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView } from 'obsidian';
+import { App, Editor, MarkdownView, Platform } from 'obsidian';
 import { getCursorCharIndex } from '../utils/editor-position';
 import { getLastNormalizedGrapheme } from '../utils/grapheme';
 import type { TriggerContext } from './trigger-context';
@@ -11,10 +11,7 @@ const INSTANT_INPUT_TYPES = new Set([
 ]);
 
 // Detect iOS devices where beforeinput/input events are unreliable for character input
-const isIOS = (): boolean => {
-	return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
-};
+const isIOS = (): boolean => Platform.isIosApp;
 
 interface PendingInputState {
 	beforeText: string;
@@ -234,10 +231,10 @@ export function createInstantInputHandlers(options: InstantInputHandlerOptions):
 			}
 
 			// Try again with a longer delay
-			setTimeout(() => checkInsertedText(attemptsLeft - 1), 10);
+			window.setTimeout(() => checkInsertedText(attemptsLeft - 1), 10);
 		};
 
-		setTimeout(() => checkInsertedText(5), 0); // Try up to 5 times with 10ms delays
+		window.setTimeout(() => checkInsertedText(5), 0); // Try up to 5 times with 10ms delays
 	};
 
 	const handlers: {

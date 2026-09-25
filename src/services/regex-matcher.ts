@@ -1,8 +1,4 @@
-import createDebug from 'debug';
-import pluginInfos from '../../manifest.json';
 import type { TriggerContext } from './trigger-context';
-
-const _log = createDebug(`${pluginInfos.id}:regex-matcher`);
 
 type CompiledTrigger = ReturnType<typeof import('../core').compileTrigger>;
 

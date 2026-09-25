@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
+import { Notice, Plugin } from 'obsidian';
 import logService from './services/log-service';
 import createDebug from 'debug';
 import pluginInfos from '../manifest.json';
@@ -87,12 +87,6 @@ export default class AutoExpander extends Plugin {
 		// Set initial delays
 		this.expansionService.updateCommandDelay(this.settings.commandDelay);
 
-		// Add status bar item
-		this.setupStatusBarItem();
-
-		// Add editor command
-		this.addEditorCommand();
-
 		// Add settings tab
 		this.addSettingTab(new AutoExpanderSettingTab(this.app, this));
 
@@ -141,28 +135,6 @@ export default class AutoExpander extends Plugin {
 	onunload() {
 		this.cleanup();
 		log("Plugin unloaded successfully");
-	}
-
-	/**
-	 * Add status bar item
-	 */
-	private setupStatusBarItem(): void {
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Auto-Expander');
-	}
-
-	/**
-	 * Add editor command
-	 */
-	private addEditorCommand(): void {
-		this.addCommand({
-			id: pluginInfos.id + '-editor-command',
-			name: pluginInfos.name + ' editor command',
-			editorCallback: (editor: Editor, _view: MarkdownView) => {
-				log(editor.getSelection());
-				editor.replaceSelection(pluginInfos.name + ' Editor Command');
-			}
-		});
 	}
 
 	/**
@@ -227,8 +199,9 @@ export default class AutoExpander extends Plugin {
 				triggerAction,
 				this.snippetService.getSnippetMap(),
 				(trigger) => this.snippetService.getCompiledTrigger(trigger),
-				(editor, snippet, compiledTrigger, ctx, triggerAction) =>
-					this.expansionService.executeSnippet(editor, snippet, compiledTrigger, ctx, triggerAction)
+				(editor, snippet, compiledTrigger, ctx, triggerAction) => {
+					void this.expansionService.executeSnippet(editor, snippet, compiledTrigger, ctx, triggerAction);
+				}
 			);
 		} catch (error) {
 			log('Error handling trigger key:', error);
@@ -322,7 +295,7 @@ export default class AutoExpander extends Plugin {
 				new Notice(`Auto Expander: Failed to load config file - ${result.error}`, 0);
 			} else {
 				// Show success notice (can auto-dismiss after 3 seconds)
-				new Notice('Auto Expander: Config file loaded successfully', 3000);
+				new Notice('Auto expander: Config file loaded successfully', 3000);
 				// Update expansion mechanism with new settings
 				this.setupExpansionMechanism();
 			}
@@ -339,7 +312,7 @@ export default class AutoExpander extends Plugin {
 			new Notice(`Auto Expander: Failed to reload config file - ${result.error}`, 0);
 		} else {
 			// Show success notice (can auto-dismiss after 3 seconds)
-			new Notice('Auto Expander: Config file reloaded successfully', 3000);
+			new Notice('Auto expander: Config file reloaded successfully', 3000);
 			this.setupExpansionMechanism();
 		}
 	}

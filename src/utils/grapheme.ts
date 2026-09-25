@@ -85,13 +85,5 @@ export function isSingleGrapheme(text: string): boolean {
 		return Array.from(normalized).length === 1;
 	}
 
-	let count = 0;
-	for (const _ of segmenter.segment(normalized)) {
-		count++;
-		if (count > 1) {
-			return false;
-		}
-	}
-
-	return count === 1;
+	return Array.from(segmenter.segment(normalized)).length === 1;
 }

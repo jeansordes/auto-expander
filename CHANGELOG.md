@@ -1,3 +1,12 @@
+# 0.5.3 (2026-09-25)
+
+### Improvements
+
+* add complete installation, configuration, usage, and privacy documentation
+* align the manifest and settings interface with Community directory requirements
+* remove leftover sample command and status bar code
+* normalize user-defined configuration file paths
+
 #  (2025-10-01)
 
 ### Bug Fixes
@@ -196,4 +205,3 @@ in forward slashes.
 - **Mobile Support**: Maintain full mobile compatibility throughout refactor
 
 This major refactor establishes a solid foundation for future feature development
-

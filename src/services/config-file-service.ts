@@ -1,4 +1,4 @@
-import { TFile, Notice, App } from 'obsidian';
+import { TFile, Notice, App, normalizePath } from 'obsidian';
 import createDebug from 'debug';
 import pluginInfos from '../../manifest.json';
 import { parseJsoncSnippets } from '../snippet-utils';
@@ -37,8 +37,8 @@ export class ConfigFileService {
 		// Clean up existing watchers
 		this.cleanup();
 
-		this.configFilePath = configFilePath;
-		this.configFile = this.getFileFromPath(configFilePath);
+		this.configFilePath = configFilePath.trim() ? normalizePath(configFilePath.trim()) : '';
+		this.configFile = this.getFileFromPath(this.configFilePath);
 
 		// Register new watchers if path is valid
 		if (this.configFile) {
@@ -97,7 +97,7 @@ export class ConfigFileService {
 
 				// If this is not the last attempt, wait a bit before retrying
 				if (attempt < maxRetries) {
-					await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // Progressive delay
+					await new Promise(resolve => window.setTimeout(resolve, 100 * attempt)); // Progressive delay
 				} else {
 					// Last attempt failed
 					return {
@@ -243,7 +243,7 @@ auto-expander-config: true
 			return undefined;
 		}
 
-		const file = this.app.vault.getAbstractFileByPath(path);
+		const file = this.app.vault.getAbstractFileByPath(normalizePath(path.trim()));
 		return file instanceof TFile ? file : undefined;
 	}
 
@@ -273,7 +273,7 @@ auto-expander-config: true
 	 */
 	private onConfigFileChanged(): void {
 		if (this.fileChangeDebounceTimer) {
-			clearTimeout(this.fileChangeDebounceTimer);
+			window.clearTimeout(this.fileChangeDebounceTimer);
 		}
 
 		this.fileChangeDebounceTimer = window.setTimeout(() => {
@@ -314,7 +314,7 @@ auto-expander-config: true
 		}
 
 		if (this.fileChangeDebounceTimer) {
-			clearTimeout(this.fileChangeDebounceTimer);
+			window.clearTimeout(this.fileChangeDebounceTimer);
 			this.fileChangeDebounceTimer = undefined;
 		}
 	}

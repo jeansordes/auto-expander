@@ -16,8 +16,6 @@ const log = createDebug(pluginInfos.id + ':core');
 // Unicode Private Use Area character used to mark cursor position in text
 const CURSOR_MARKER_CHAR = '\uE000';
 
-// Cursor marker regex to extract options (single match)
-const _CURSOR_MARKER_REGEX = /\$\{?0(?::([^}]+))?\}?/;
 // Global variant for iterating through cursor markers
 const CURSOR_MARKER_GLOBAL_REGEX = /\$\{?0(?::([^}]+))?\}?/g;
 
@@ -193,7 +191,7 @@ export function matchesTrigger(
 			const now = Date.now();
 			if (now - lastMatchTimeoutNoticeAt > MATCH_TIMEOUT_NOTICE_COOLDOWN_MS) {
 				lastMatchTimeoutNoticeAt = now;
-				new Notice('Auto Expander: regex matching timed out after 5s. Please review your trigger pattern.', MATCH_TIMEOUT_NOTICE_DURATION_MS);
+				new Notice('Auto expander: regex matching timed out after 5s. Please review your trigger pattern.', MATCH_TIMEOUT_NOTICE_DURATION_MS);
 			}
 			log('Regex matching timed out; returning false');
 			return false;

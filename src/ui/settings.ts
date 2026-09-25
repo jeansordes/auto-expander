@@ -16,16 +16,14 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	async display(): Promise<void> {
+	display(): void {
 		const {containerEl} = this;
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Auto Expander Settings'});
-
 		// Config file path setting
 		const configSetting = new Setting(containerEl)
-			.setName('Config File Path')
+			.setName('Config file path')
 			.setDesc('Path to the file containing your snippets (supports .md and .json files). The JSON can be in a code block or as plain JSON.')
 			.setClass('config-path');
 
@@ -44,13 +42,13 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		});
 
 		// Status display area
-		this.statusEl = containerEl.createEl('div', {cls: 'dotnav-path-validation'});
+		this.statusEl = containerEl.createDiv({cls: 'dotnav-path-validation'});
 
 		// Error display
-		this.errorEl = this.statusEl.createEl('div', {cls: 'auto-expander-error auto-expander-error-hidden'});
+		this.errorEl = this.statusEl.createDiv({cls: 'auto-expander-error auto-expander-error-hidden'});
 
 		// Success display
-		this.successEl = this.statusEl.createEl('div', {cls: 'auto-expander-success auto-expander-success-hidden'});
+		this.successEl = this.statusEl.createDiv({cls: 'auto-expander-success auto-expander-success-hidden'});
 
 		// Register input change handler
 		this.configPathInput.addEventListener('input', (e) => {
@@ -65,7 +63,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 
 		// Command delay setting
 		new Setting(containerEl)
-			.setName('Command Delay')
+			.setName('Command delay')
 			.setDesc('Delay in milliseconds between executing commands after snippet expansion (default: 100ms). Increase if commands interfere with each other.')
 			.addText(text => text
 				.setPlaceholder('100')
@@ -78,7 +76,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 				}));
 
 		// Initial validation
-		await this.validateAndUpdateStatus();
+		void this.validateAndUpdateStatus();
 	}
 
 	/**
@@ -116,7 +114,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 		// Path is valid - try to read and parse the file
 		try {
 			const result = await this.plugin.configFileService.readConfigFile();
-			await this.displayParseResult(result);
+			this.displayParseResult(result);
 		} catch {
 			this.errorEl.empty();
 			this.errorEl.appendChild(this.createValidationMessage('error', 'Config file not found'));
@@ -128,7 +126,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 	/**
 	 * Display parsing results
 	 */
-	private async displayParseResult(result: { error?: string; invalidSnippets?: ParsedSnippet[] }): Promise<void> {
+	private displayParseResult(result: { error?: string; invalidSnippets?: ParsedSnippet[] }): void {
 		if (!this.errorEl || !this.successEl || !this.actionButton) return;
 
 		if (result.error) {
@@ -159,14 +157,12 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 	 * Create a validation message element
 	 */
 	private createValidationMessage(type: 'success' | 'error', message: string): HTMLElement {
-		const messageEl = document.createElement('div');
-		messageEl.className = `dotnav-validation-message dotnav-validation-${type}`;
+		const messageEl = createDiv({cls: `dotnav-validation-message dotnav-validation-${type}`});
 
-		const iconSpan = document.createElement('span');
-		iconSpan.className = 'dotnav-validation-icon';
+		const iconSpan = createSpan({cls: 'dotnav-validation-icon'});
 		iconSpan.textContent = type === 'success' ? '✓' : '✗';
 
-		const textSpan = document.createElement('span');
+		const textSpan = createSpan();
 		textSpan.textContent = message;
 
 		messageEl.appendChild(iconSpan);
@@ -181,7 +177,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 	private showOpenFileButton(): void {
 		if (!this.actionButton) return;
 
-		this.actionButton.textContent = 'Open File';
+		this.actionButton.textContent = 'Open file';
 		this.actionButton.onclick = async () => {
 			await this.plugin.configFileService.openConfigFile();
 		};
@@ -193,7 +189,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 	private showCreateDefaultButton(): void {
 		if (!this.actionButton) return;
 
-		this.actionButton.textContent = 'Create Default File';
+		this.actionButton.textContent = 'Create default file';
 		this.actionButton.onclick = async () => {
 			const result = await this.plugin.configFileService.createDefaultConfigFile();
 			if (result.success) {
@@ -201,7 +197,7 @@ export class AutoExpanderSettingTab extends PluginSettingTab {
 				// Update the input field
 				if (this.configPathInput) {
 					this.configPathInput.value = 'auto-expander-config.md';
-					await this.schedulePathUpdate('auto-expander-config.md');
+					this.schedulePathUpdate('auto-expander-config.md');
 				}
 			} else {
 				new Notice(`Failed to create default config file: ${result.error}`);
